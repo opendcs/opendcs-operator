@@ -1,0 +1,46 @@
+apiVersion: lrgs.opendcs.org/v1
+kind: DdsConnection
+metadata:
+  name: local
+spec:
+  hostname: local-lrgs.test
+  username: testuser
+---
+apiVersion: lrgs.opendcs.org/v1
+kind: DdsConnection
+metadata:
+  name: local2
+spec:
+  hostname: local2-lrgs.test
+  username: testuser
+---
+apiVersion: v1
+kind: Secret
+type: lrgs.opendcs.org/ddsuser
+metadata:
+  name: testuser
+stringData:
+  username: testuser
+  password: test
+  roles:
+---
+apiVersion: v1
+kind: Secret
+type: lrgs.opendcs.org/ddsuser
+metadata:
+  name: testuser2
+stringData:
+  username: testuser2
+  password: test
+  roles: dds
+---
+apiVersion: v1
+kind: Secret
+type: lrgs.opendcs.org/ddsuser
+metadata:
+  name: testadmin
+stringData:
+  username: testadmin
+  password: test
+  roles: dds,admin
+---

@@ -1,0 +1,17 @@
+---
+apiVersion: lrgs.opendcs.org/v1
+kind: DrgsConnection
+metadata:
+  name: drgs-w
+spec:  
+  hostname: drgs-w.test
+  startPattern: 534D0D0A
+---
+apiVersion: lrgs.opendcs.org/v1
+kind: DrgsConnection
+metadata:
+  name: drgs-e
+spec:  
+  hostname: drgs-e.test
+  startPattern: 534E0D0A
+---
