@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: Secret
+type: lrgs.opendcs.org/ddsuser
+metadata:
+  name: testuser
+stringData:
+  username: testuser
+  password: test
+  roles:
+---
+apiVersion: v1
+kind: Secret
+type: lrgs.opendcs.org/ddsuser
+metadata:
+  name: testuser2
+stringData:
+  username: testuser2
+  password: test
+  roles: dds
+---
+apiVersion: v1
+kind: Secret
+type: basic-auth
+metadata:
+  name: testadmin-basic
+stringData:
+  username: testadmin
+  password: test
+---
+apiVersion: v1
+kind: Secret
+type: basic-auth
+metadata:
+  name: testuser-basic
+stringData:
+  username: testuser
+  password: test
+---
+apiVersion: v1
+kind: Secret
+type: basic-auth
+metadata:
+  name: testuser2-basic
+stringData:
+  username: testuser2
+  password: test

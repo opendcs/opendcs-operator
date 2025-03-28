@@ -14,14 +14,22 @@ impl std::fmt::Display for DdsUser {
 }
 
 pub struct PasswordFile {
-    file: File,
     users: Vec<DdsUser>,
 }
 
+fn to_line(user: &DdsUser) -> String {
+    let pw_hash = lrgs_password_hash(&user.username, &user.password);
+    let roles = if user.roles.is_empty() {
+        String::from("none")
+    } else {
+        user.roles.join(",")
+    };
+    format!("{}:{roles}:{pw_hash}:", &user.username).to_string()
+}
+
 impl PasswordFile {
-    pub fn new(file: File) -> PasswordFile {
+    pub fn new() -> PasswordFile {
         PasswordFile {
-            file,
             users: vec![],
         }
     }
@@ -30,25 +38,29 @@ impl PasswordFile {
         self.users.push(user);
     }
 
-    pub fn write_file(&self) -> std::io::Result<()> {
-        let mut f = &self.file;
+    
+
+    pub fn write_file(&self, mut f: &File) -> std::io::Result<()> {
+        
         for user in self.users.as_slice() {
-            let pw_hash = lrgs_password_hash(&user.username, &user.password);
-            let roles = if user.roles.is_empty() {
-                String::from("none")
-            } else {
-                user.roles.join(",")
-            };
-            writeln!(f,"{}:{roles}:{pw_hash}:", &user.username)?;
+            writeln!(f,"{}", to_line(user));
         }
         Ok(())
     }
+
+    pub fn to_string(&self) -> String {
+        let mut buffer = String::new();
+        for user in self.users.as_slice() {
+            buffer.push_str(format!("{}\n",to_line(user)).as_str());
+        }
+        return buffer;
+    }
+
 }
 
 impl std::fmt::Display for PasswordFile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let file = &self.file;
-        write!(f, "PasswordFile(file={file:?}, users = [")?;
+        write!(f, "PasswordFile(users = [")?;
         for user in self.users.as_slice() {
             write!(f, "{user},")?;
         }

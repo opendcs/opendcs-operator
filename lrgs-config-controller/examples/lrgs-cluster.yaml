@@ -1,0 +1,10 @@
+---
+apiVersion: lrgs.opendcs.org/v1
+kind: LrgsCluster
+metadata:
+  name: main
+spec:
+  replicas: 2
+  storageClass: standard
+  storageSize: 30Gi
+---

@@ -1,0 +1,32 @@
+use std::fmt::Debug;
+
+use chrono::{DateTime, Utc};
+use garde::Validate;
+use kube::CustomResource;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
+
+#[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema, Validate)]
+#[kube(
+    group = "lrgs.opendcs.org",
+    version = "v1",
+    kind = "LrgsCluster",
+    status = "LrgsClusterStatus",
+    namespaced
+)]
+#[serde(rename_all = "camelCase")]
+pub struct LrgsClusterSpec {
+    #[garde(range(min = 0))]
+    pub replicas: i32,
+    #[garde(skip)]
+    pub storage_class: String,
+    #[garde(skip)]
+    pub storage_size: String,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+pub  struct LrgsClusterStatus {
+    checksum: String,
+    last_updated: Option<DateTime<Utc>>,
+}
