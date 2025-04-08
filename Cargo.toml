@@ -16,6 +16,10 @@ path = "src/crdgen.rs"
 [target.'cfg(target_os = "linux")']
 rustflags = ["-C", "linker=ld.lld", "-C", "relocation-model=static", "-C", "strip=symbols"]
 
+[features]
+default = []
+telemetry = ["opentelemetry-otlp"]
+
 [dependencies]
 kube = { version = "0.98.0", features = ["runtime", "derive"] }
 k8s-openapi = { version = "0.24.0", features = ["latest"] }
