@@ -27,6 +27,6 @@ pub struct LrgsClusterSpec {
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 pub  struct LrgsClusterStatus {
-    checksum: String,
-    last_updated: Option<DateTime<Utc>>,
+    pub checksum: String,
+    pub last_updated: Option<DateTime<Utc>>,
 }

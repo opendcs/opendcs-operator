@@ -4,11 +4,43 @@ export PATH=/opt/opendcs/bin:$PATH
 
 mkdir $LRGSHOME/netlist
 
-mv /config/.lrgs.passwd $LRGSHOME/.lrgs.passwd
+cp /config/.lrgs.passwd $LRGSHOME/.lrgs.passwd
 for user in `cat $LRGSHOME/.lrgs.passwd | cut -d : -f 1 -s`
 do
     mkdir -p $LRGSHOME/users/$user
 done
+
+# Handle DDS config replication
+if [ "${LRGS_INDEX}" != "0" ]
+then
+    LAST_INDEX=`grep number /config/ddsrecv.conf | tail -1 | sed 's/.*"\(\d*\)".*/\1/'`
+    if [ "$LAST_INDEX" == "" ]
+    then
+        LAST_INDEX=-1
+    fi
+    LAST_INDEX=$((LAST_INDEX+1))
+
+    target_host=`hostname | sed 's/\(.*\)-\d*$/\1-0/'`
+
+    replication_connection="<connection number="$LAST_INDEX" host="$target_host"> \
+    <enabled>true</enabled> \
+    <port>16003</port> \
+    <name>replication</name> \
+    <username>replication</username> \
+    <authenticate>true</authenticate> \
+</connection>"
+
+    if grep "</ddsrecvconf>" /config/ddsrecv.conf
+    then
+        sed "/<\/ddsrecvconf>/i \
+${replication_connection} \
+" /config/ddsrecv.conf > /tmp/ddsrecv.conf
+    else
+        sed "s/<ddsrecvconf \/>/<ddsrecvconf>${replication_connection}<\/ddsrecvconf>/" /config/ddsrecv.conf > /tmp/ddsrecv.conf
+    fi
+else
+    cp /config/ddsrecv.conf /tmp/ddsrecv.conf
+fi
 
 DH=$DCSTOOL_HOME
 

@@ -1,14 +1,14 @@
 use std::collections::BTreeMap;
 
 use hickory_resolver::config;
-use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMapVolumeSource, Container, ContainerPort, EnvVar, PersistentVolumeClaim, PersistentVolumeClaimSpec, PersistentVolumeClaimTemplate, PodSpec, PodTemplateSpec, SecretVolumeSource, Volume, VolumeMount, VolumeResourceRequirements}}, apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::{LabelSelector, OwnerReference}}};
+use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMapVolumeSource, Container, ContainerPort, EnvVar, EnvVarSource, ObjectFieldSelector, PersistentVolumeClaim, PersistentVolumeClaimSpec, PersistentVolumeClaimTemplate, PodSpec, PodTemplateSpec, SecretVolumeSource, Volume, VolumeMount, VolumeResourceRequirements}}, apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::{LabelSelector, OwnerReference}}};
 use kube::{api::ObjectMeta, Resource, ResourceExt};
 
 use crate::api::{constants::LRGS_GROUP, v1::lrgs::LrgsCluster};
 
 
 
-pub fn create_statefulset(lrgs_spec: &LrgsCluster, config_hash: String) -> StatefulSet {
+pub fn create_statefulset(lrgs_spec: &LrgsCluster, config_hash: String, script_hash: String) -> StatefulSet {
     let owner_ref = lrgs_spec.controller_owner_ref(&()).unwrap();
 
     let mut labels: BTreeMap<String,String> = BTreeMap::new();
@@ -16,6 +16,7 @@ pub fn create_statefulset(lrgs_spec: &LrgsCluster, config_hash: String) -> State
 
     let mut annotations: BTreeMap<String, String> = BTreeMap::new();
     annotations.insert(format!("{}/lrgs-config-hash",LRGS_GROUP.as_str()),config_hash);
+    annotations.insert(format!("{}/lrgs-script-hash",LRGS_GROUP.as_str()),script_hash);
 
     let pod_spec = pod_spec_template(lrgs_spec, &owner_ref, &labels, &annotations);
     let pvct = claim_templates(lrgs_spec, &owner_ref, &labels);
@@ -78,16 +79,21 @@ fn pod_spec_template(_lrgs_spec: &LrgsCluster, owner_ref: &OwnerReference, label
                                 ..Default::default()
                             }
                         ]),
-                        env: None, /* Some(
+                        env: Some(
                             vec![
                                 EnvVar {
-                                    name: "LRGSHOME".to_string(),
-                                    value: Some("/lrgs_home2".to_string()),
+                                    name: "LRGS_INDEX".to_string(),
+                                    value_from: Some(
+                                        EnvVarSource {
+                                            field_ref: Some(ObjectFieldSelector { field_path: "metadata.labels['apps.kubernetes.io/pod-index']".into(), ..Default::default() } ),
+                                            ..Default::default()
+                                        }
+                                    ),
                                     ..Default::default()
                                 }
                             ]                            
                         )
-                        ,*/
+                        ,
                         volume_mounts: Some(vec![
                             VolumeMount {
                                 name: "archive".to_string(),

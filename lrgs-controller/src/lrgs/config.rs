@@ -4,11 +4,12 @@ use hickory_resolver::TokioAsyncResolver as Resolver;
 use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString};
 //use futures::{StreamExt, TryStreamExt};
 use kube::{
-    api::{Api, ListParams, ObjectMeta}, Client, Error, ResourceExt
+    api::{Api, ListParams, ObjectMeta}, Client
 };
 use passwords::PasswordGenerator;
 use sha2::{Sha256, Digest};
 use simple_xml_builder::XMLElement;
+use tracing::{debug, warn};
 //, PostParams}};
 
 use std::{collections::BTreeMap, fmt::format, vec};
@@ -49,27 +50,6 @@ async fn create_ddsrecv_conf(client: Client, lrgs_service_dns: &str) -> Result<S
     let mut i: i32 = 0;
     // Read pods in the configured namespace into the typed interface from k8s-openapi
     let connections: Api<DdsConnection> = Api::default_namespaced(client.clone());
-    // get other lrgs's
-    let resolver = Resolver::tokio_from_system_conf().unwrap();
-    println!("Using DNS entry {} for lookup.", lrgs_service_dns);
-    let recs_res = resolver.srv_lookup(lrgs_service_dns).await;
-    
-    let recs = match recs_res {
-        Ok(_) => recs_res.unwrap().iter().map(|srv| {srv.target().to_ascii()}).collect(),
-        Err(e) => match e.kind() {
-            hickory_resolver::error::ResolveErrorKind::NoRecordsFound { query: _, soa: _, negative_ttl: _, response_code: _, trusted: _ } => {
-                println!("No LRGSes configured to setup replication.");
-                Vec::new()
-            },
-            _ => return Err(anyhow!(e))
-        }
-    };
-    for rec in recs {
-        let name = format!("replication-{}", i);
-        add_dds_connection(&mut ddsrecv_conf, i, &name, &rec, 16003, "replication", true);
-        print!("Adding: {rec:?}");
-        i = i + 1;
-    }
 
     // NOTE: review error handling more. No connections is reasonable, need
     // to make sure this would always just be empty and figure out some other error conditions.
@@ -78,7 +58,6 @@ async fn create_ddsrecv_conf(client: Client, lrgs_service_dns: &str) -> Result<S
         add_dds_connection(&mut ddsrecv_conf, i, &host.metadata.name.unwrap(), &host.spec.hostname, host.spec.port, &host.spec.username, host.spec.enabled.unwrap_or(false));
         i = i + 1;
     }
-    print!("{}", ddsrecv_conf);
     Ok(ddsrecv_conf.to_string())
 }
 
@@ -123,8 +102,8 @@ async fn create_drgsrecv_conf(client: Client) -> Result<String> {
     Ok(drgsrecv_conf.to_string())
 }
 
-async fn create_password_file(client: Client) -> Result<String> {
-    let users: Api<Secret> = Api::default_namespaced(client.clone());
+async fn create_password_file(client: Client, namespace: &str) -> Result<String> {
+    let users: Api<Secret> = Api::namespaced(client.clone(), namespace);
     let params = ListParams::default().fields("type=lrgs.opendcs.org/ddsuser");
     let mut pw_file = password_file::PasswordFile::new();
     for user in users.list(&params).await? {
@@ -158,11 +137,12 @@ pub struct LrgsConfig {
 
 pub async fn create_lrgs_config(client: Client, cluster: &LrgsCluster, owner_ref: &OwnerReference) -> Result<LrgsConfig> {
     let mut hasher = Sha256::new();
+    let namespace = cluster.metadata.namespace.clone().expect("LrgsCluster does not have a namespace set.");
 
-    let password_file = create_password_file(client.clone(), ).await?;
+    let password_file = create_password_file(client.clone(), &namespace).await?;
     hasher.update(password_file.as_bytes());
 
-    let dns = format!("{}-lrgs-service-headless", &owner_ref.name);
+    let dns = format!("_dds._tcp.{}-lrgs-service-headless.{}.svc.cluster.local", &owner_ref.name, &namespace);
     let dds_config = create_ddsrecv_conf(client.clone(), &dns).await?;
     hasher.update(dds_config.as_bytes());
 
@@ -172,7 +152,7 @@ pub async fn create_lrgs_config(client: Client, cluster: &LrgsCluster, owner_ref
     let config_file_data = Vec::from("
 archiveDir: /archive
 enableDdsRecv: true
-ddsRecvConfig: ${LRGSHOME}/ddsrecv.conf
+ddsRecvConfig: /tmp/ddsrecv.conf
 enableDrgsRecv: false
 drgsRecvConfig: ${LRGSHOME}/drgsconf.xml
 htmlStatusSeconds: 10
@@ -197,7 +177,7 @@ noTimeout: true
         ),
         metadata: ObjectMeta {
             name: Some(format!("{}-lrgs-configuration",&owner_ref.name)),
-            namespace: cluster.namespace().clone(),
+            namespace: Some(namespace.clone()),
             owner_references: Some(vec![owner_ref.clone()]),
             annotations: Some(
                 BTreeMap::from(
@@ -213,6 +193,7 @@ noTimeout: true
     };
 
     let hash = base16ct::lower::encode_string(&hasher.finalize());
+    debug!("Calculated hash is: {hash}");
     return Ok(LrgsConfig {
         secret,
         hash
@@ -228,7 +209,7 @@ pub async fn create_managed_users(client: Client, lrgs_cluster: &LrgsCluster, ow
     let mut managed_users = Vec::new();
     for user in required {
         match secrets_api.get_opt(user).await? {
-            Some(_) => println!("User already exists."), // Perhaps we should put a rotation here
+            Some(_) => debug!("User already exists."), // Perhaps we should put a rotation here
             None => {
                 let password = PasswordGenerator {
                     length: 64,
@@ -258,7 +239,7 @@ pub async fn create_managed_users(client: Client, lrgs_cluster: &LrgsCluster, ow
                         type_: Some("lrgs.opendcs.org/ddsuser".to_string()),
                         metadata: ObjectMeta {
                             name: Some(user.to_string()),
-                            namespace: lrgs_cluster.namespace().clone(),
+                            namespace: lrgs_cluster.metadata.namespace.clone(),
                             owner_references: Some(vec![owner_ref.clone()]),
                             annotations: Some(
                                 BTreeMap::from(
