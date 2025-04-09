@@ -55,14 +55,29 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.token != null && secrets.token || secrets.GITHUB_TOKEN }}
-      - name: Push images
-        id: image-push
-        run: |
-          REPO=`echo ${{github.repository_owner}} | tr  '[:upper:]' '[:lower:]'`
-          TAG="ghcr.io/${REPO}/k8s/lrgs-controller:${VERSION}"
-          docker build -t ${TAG} .
-          docker push ${TAG}
-          echo "LRGS_TAG=$TAG" >> $GITHUB_OUTPUT
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: k8s/lrgs-controller
+          tags: type=sha,format=long
+      - uses: docker/build-push-action@v6
+        id: build-and-push
+        with:
+          platforms: linux/amd64,linux/arm/v7,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
       - name: Sign the container image
+        env:
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
         run: |
-          cosign sign --yes ${{steps.image-push.outputs.LRGS_TAG}}
+          images=""
+          for tag in ${TAGS}; do
+            images+="${tag}@${DIGEST} "
+          done
+          cosign sign --yes ${images}
