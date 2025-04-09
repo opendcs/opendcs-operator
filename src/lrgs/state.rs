@@ -9,6 +9,7 @@ use super::metrics::Metrics;
 
 // Context for our reconciler
 #[derive(Clone)]
+#[allow(unused)]
 pub struct Context {
     /// Kubernetes client
     pub client: Client,

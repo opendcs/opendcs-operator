@@ -38,16 +38,6 @@ impl PasswordFile {
         self.users.push(user);
     }
 
-    
-
-    pub fn write_file(&self, mut f: &File) -> std::io::Result<()> {
-        
-        for user in self.users.as_slice() {
-            writeln!(f,"{}", to_line(user));
-        }
-        Ok(())
-    }
-
     pub fn to_string(&self) -> String {
         let mut buffer = String::new();
         for user in self.users.as_slice() {
