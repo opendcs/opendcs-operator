@@ -37,8 +37,10 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: k8s/lrgs-controller
-          tags: type=sha,format=long
+          images: ghcr.io/opendcs/k8s/lrgs-controller
+          tags: |
+            type=sha,format=long
+            type=ref,event=tag
       - uses: docker/build-push-action@v6
         id: build-and-push
         with:
