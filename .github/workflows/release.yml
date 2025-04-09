@@ -65,4 +65,4 @@ jobs:
           echo "LRGS_TAG=$TAG" >> $GITHUB_OUTPUT
       - name: Sign the container image
         run: |
-          cosign sign ${{steps.image-push.outputs.LRGS_TAG}}
+          cosign sign --yes ${{steps.image-push.outputs.LRGS_TAG}}
