@@ -32,6 +32,7 @@ async fn main() ->  anyhow::Result<()> {
                 .service(health)
                 .service(metrics)
     })
+    .workers(5)
     .bind("0.0.0.0:8080")?
     .shutdown_timeout(5);
 

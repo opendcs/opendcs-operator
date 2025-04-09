@@ -1,6 +1,6 @@
 
 use crate::api::{constants::LRGS_GROUP, v1::{dds_recv::DdsConnection, drgs::DrgsConnection, lrgs::{self, LrgsCluster}}};
-use hickory_resolver::TokioAsyncResolver as Resolver;
+//use hickory_resolver::TokioAsyncResolver as Resolver;
 use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString};
 //use futures::{StreamExt, TryStreamExt};
 use kube::{
