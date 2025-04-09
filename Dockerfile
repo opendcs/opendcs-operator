@@ -6,7 +6,7 @@ WORKDIR /usr/src/myapp
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/src/app/target \
-    cargo install --target x86_64-unknown-linux-musl --path .
+    cargo install --target `uname -m`-unknown-linux-musl --path .
 
 FROM scratch
 
