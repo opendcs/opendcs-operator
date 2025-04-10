@@ -22,6 +22,9 @@ jobs:
       - run: cargo test
   docker-images:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [linux/amd64, linux/arm64/v8]
     steps:
       - name: Clean up disk space, so we don't run out.
         run: |
@@ -45,6 +48,6 @@ jobs:
       - uses: docker/build-push-action@v6
         id: build-and-push
         with:
-          platforms: linux/amd64,linux/arm64/v8
-          push: true
+          platforms: ${{ matrix.arch }}
+          push: false
           tags: ${{ steps.meta.outputs.tags }}
