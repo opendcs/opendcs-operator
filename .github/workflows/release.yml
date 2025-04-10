@@ -29,6 +29,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [linux/amd64, linux/arm64/v8]
     permissions:
         id-token: write
         contents: write
@@ -70,10 +73,9 @@ jobs:
       - uses: docker/build-push-action@v6
         id: build-and-push
         with:
-          platforms: linux/amd64,linux/arm64/v8
+          platforms: ${{ matrix.arch }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
-            
       - name: Sign the container image
         env:
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
