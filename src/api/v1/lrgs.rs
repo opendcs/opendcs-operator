@@ -23,6 +23,8 @@ pub struct LrgsClusterSpec {
     pub storage_class: String,
     #[garde(skip)]
     pub storage_size: String,
+    #[garde(range(min = 0))]
+    pub archive_length_days: Option<i32>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]

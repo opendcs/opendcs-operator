@@ -148,12 +148,15 @@ pub async fn create_lrgs_config(client: Client, cluster: &LrgsCluster, owner_ref
     let drgs_config = create_drgsrecv_conf(client.clone(), &namespace).await?;
     hasher.update(drgs_config.as_bytes());
 
+    let num_day_files = cluster.spec.archive_length_days.unwrap_or(31);
+
     let config_file_data = Vec::from("
 archiveDir: /archive
 enableDdsRecv: true
 ddsRecvConfig: /tmp/ddsrecv.conf
 enableDrgsRecv: false
 drgsRecvConfig: ${LRGSHOME}/drgsconf.xml
+numDayFiles: {num_day_files}
 htmlStatusSeconds: 10
 ddsListenPort: 16003
 ddsRequireAuth: true
