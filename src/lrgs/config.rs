@@ -45,11 +45,11 @@ fn add_dds_connection(conf: &mut XMLElement, i: i32, name: &str, hostname: &str,
     conf.add_child(connection);
 }
 
-async fn create_ddsrecv_conf(client: Client, lrgs_service_dns: &str) -> Result<String> {
+async fn create_ddsrecv_conf(client: Client, namespace: &str) -> Result<String> {
     let mut ddsrecv_conf = XMLElement::new("ddsrecvconf");
     let mut i: i32 = 0;
     // Read pods in the configured namespace into the typed interface from k8s-openapi
-    let connections: Api<DdsConnection> = Api::default_namespaced(client.clone());
+    let connections: Api<DdsConnection> = Api::namespaced(client.clone(), &namespace);
 
     // NOTE: review error handling more. No connections is reasonable, need
     // to make sure this would always just be empty and figure out some other error conditions.
@@ -61,10 +61,10 @@ async fn create_ddsrecv_conf(client: Client, lrgs_service_dns: &str) -> Result<S
     Ok(ddsrecv_conf.to_string())
 }
 
-async fn create_drgsrecv_conf(client: Client) -> Result<String> {
+async fn create_drgsrecv_conf(client: Client, namespace: &str) -> Result<String> {
     let mut drgsrecv_conf = XMLElement::new("drgsconf");
     let mut i: i32 = 0;
-    let drgs_connections: Api<DrgsConnection> = Api::default_namespaced(client.clone());
+    let drgs_connections: Api<DrgsConnection> = Api::namespaced(client.clone(), namespace);
     for connection in drgs_connections.list(&ListParams::default()).await? {
         println!("Adding DRGS Connection {i}: {}", connection.spec.hostname);
         let mut xml_connection = XMLElement::new("connection");
@@ -142,11 +142,10 @@ pub async fn create_lrgs_config(client: Client, cluster: &LrgsCluster, owner_ref
     let password_file = create_password_file(client.clone(), &namespace).await?;
     hasher.update(password_file.as_bytes());
 
-    let dns = format!("_dds._tcp.{}-lrgs-service-headless.{}.svc.cluster.local", &owner_ref.name, &namespace);
-    let dds_config = create_ddsrecv_conf(client.clone(), &dns).await?;
+    let dds_config = create_ddsrecv_conf(client.clone(), &namespace).await?;
     hasher.update(dds_config.as_bytes());
 
-    let drgs_config = create_drgsrecv_conf(client.clone()).await?;
+    let drgs_config = create_drgsrecv_conf(client.clone(), &namespace).await?;
     hasher.update(drgs_config.as_bytes());
 
     let config_file_data = Vec::from("
