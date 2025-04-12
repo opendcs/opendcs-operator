@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMapVolumeSource, Container, ContainerPort, EnvVar, EnvVarSource, ObjectFieldSelector, PersistentVolumeClaim, PersistentVolumeClaimSpec, PersistentVolumeClaimTemplate, PodSpec, PodTemplateSpec, SecretVolumeSource, Volume, VolumeMount, VolumeResourceRequirements}}, apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::{LabelSelector, OwnerReference}}};
+use k8s_openapi::{api::{apps::v1::{StatefulSet, StatefulSetSpec}, core::v1::{ConfigMapVolumeSource, Container, ContainerPort, EnvVar, EnvVarSource, ObjectFieldSelector, PersistentVolumeClaim, PersistentVolumeClaimSpec, PersistentVolumeClaimTemplate, PodSecurityContext, PodSpec, PodTemplateSpec, SecretVolumeSource, SecurityContext, Volume, VolumeMount, VolumeResourceRequirements}}, apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::{LabelSelector, OwnerReference}}};
 use kube::{api::ObjectMeta, Resource, ResourceExt};
 
 use crate::api::{constants::LRGS_GROUP, v1::lrgs::LrgsCluster};
@@ -69,6 +69,10 @@ fn pod_spec_template(_lrgs_spec: &LrgsCluster, owner_ref: &OwnerReference, label
                         name: "lrgs".to_string(),
                         image: Some("ghcr.io/opendcs/lrgs:7.0.15-RC03".to_string()),
                         command: Some(vec!["/bin/bash".to_string(),"/scripts/lrgs.sh".into(), "-f".into(), "/config/lrgs.conf".into()]),
+                        security_context: Some(SecurityContext{ 
+                            allow_privilege_escalation: Some(false), 
+                            ..Default::default()
+                            }),
                         ports: Some(vec![
                             ContainerPort {
                                 container_port: 16003,
@@ -131,8 +135,17 @@ fn pod_spec_template(_lrgs_spec: &LrgsCluster, owner_ref: &OwnerReference, label
                             ..Default::default()
                        }
                 ]),
+                security_context: Some(PodSecurityContext {
+                    fs_group: Some(1000),
+                    fs_group_change_policy:Some("OnRootMismatch".into()),
+                    run_as_group: Some(1000),
+                    run_as_non_root: Some(true),
+                    run_as_user: Some(1000),
+                    ..Default::default()
+                }),
                 ..Default::default()
-         }
+            
+            }
         ),
     }
 }
