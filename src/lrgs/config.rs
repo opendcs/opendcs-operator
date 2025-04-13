@@ -150,19 +150,19 @@ pub async fn create_lrgs_config(client: Client, cluster: &LrgsCluster, owner_ref
 
     let num_day_files = cluster.spec.archive_length_days.unwrap_or(31);
 
-    let config_file_data = Vec::from("
+    let config_file_data = Vec::from(format!("
 archiveDir: /archive
 enableDdsRecv: true
 ddsRecvConfig: /tmp/ddsrecv.conf
 enableDrgsRecv: false
-drgsRecvConfig: ${LRGSHOME}/drgsconf.xml
+drgsRecvConfig: ${{LRGSHOME}}/drgsconf.xml
 numDayFiles: {num_day_files}
 htmlStatusSeconds: 10
 ddsListenPort: 16003
 ddsRequireAuth: true
 # this prevents the LRGS from failing to respond if no data is available
 noTimeout: true
-    ".to_string());
+    ").to_string());
 
     let password_file_data = Vec::from(password_file);
     let dds_config_data = Vec::from(dds_config);
