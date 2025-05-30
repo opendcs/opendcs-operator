@@ -31,7 +31,7 @@ pub fn create_statefulset(lrgs_spec: &LrgsCluster, config_hash: String, script_h
         persistent_volume_claim_retention_policy: None,
         pod_management_policy: None,
         revision_history_limit: None,
-        service_name: "lrgs".to_string(),
+        service_name: Some("lrgs".to_string()),
         template: pod_spec,
         update_strategy: None,
         volume_claim_templates: Some(pvct), 
