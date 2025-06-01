@@ -38,6 +38,9 @@ pub struct DdsConnectionSpec {
     pub enabled: Option<bool>,
     #[garde(ascii, length(min = 1))]
     pub username: String,
+    #[garde(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tls_mode: Option<TlsMode>,
 }
 
 #[allow(unused)]
@@ -51,4 +54,11 @@ fn add_one_of(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Sch
 
 fn port_default() -> i32 {
     16003
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+pub  enum TlsMode {
+    NoTls,
+    StartTls,
+    Tls,
 }
