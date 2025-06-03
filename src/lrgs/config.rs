@@ -1,5 +1,5 @@
 
-use crate::api::{constants::LRGS_GROUP, v1::{dds_recv::DdsConnection, drgs::DrgsConnection, lrgs::{self, LrgsCluster}}};
+use crate::api::{constants::LRGS_GROUP, v1::{dds_recv::{DdsConnection, TlsMode}, drgs::DrgsConnection, lrgs::{self, LrgsCluster}}};
 //use hickory_resolver::TokioAsyncResolver as Resolver;
 use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString};
 //use futures::{StreamExt, TryStreamExt};
@@ -17,7 +17,7 @@ use anyhow::{anyhow, Result};
 
 use super::password_file;
 
-fn add_dds_connection(conf: &mut XMLElement, i: i32, name: &str, hostname: &str, port: i32, username: &str, enabled: bool) {
+fn add_dds_connection(conf: &mut XMLElement, i: i32, name: &str, hostname: &str, port: i32, username: &str, enabled: bool, tls_mode: TlsMode) {
     let mut connection = XMLElement::new("connection");
     connection.add_attribute("number", i);
     connection.add_attribute("host", hostname);
@@ -36,11 +36,21 @@ fn add_dds_connection(conf: &mut XMLElement, i: i32, name: &str, hostname: &str,
     let mut authenticate = XMLElement::new("authenticate");
     authenticate.add_text("true");
 
+    let mut tls = XMLElement::new("use-tls");
+    match tls_mode {
+        TlsMode::NoTls => tls.add_text("NONE"),
+        TlsMode::StartTls => tls.add_text("START_TLS"),
+        TlsMode::Tls => tls.add_text("TLS"),
+    }
+
     connection.add_child(xml_enabled);
     connection.add_child(xml_port);
     connection.add_child(xml_name);
     connection.add_child(xml_username);
     connection.add_child(authenticate);
+    connection.add_child(tls);
+
+    
 
     conf.add_child(connection);
 }
@@ -55,7 +65,9 @@ async fn create_ddsrecv_conf(client: Client, namespace: &str) -> Result<String> 
     // to make sure this would always just be empty and figure out some other error conditions.
     for host in connections.list(&ListParams::default()).await? {
         println!("found dds {}", host.spec.hostname);
-        add_dds_connection(&mut ddsrecv_conf, i, &host.metadata.name.unwrap(), &host.spec.hostname, host.spec.port, &host.spec.username, host.spec.enabled.unwrap_or(false));
+        add_dds_connection(&mut ddsrecv_conf, i, &host.metadata.name.unwrap(), &host.spec.hostname,
+                           host.spec.port, &host.spec.username, host.spec.enabled.unwrap_or(false),
+                           host.spec.tls_mode.unwrap_or(TlsMode::NoTls));
         i = i + 1;
     }
     Ok(ddsrecv_conf.to_string())
