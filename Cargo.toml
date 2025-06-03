@@ -6,7 +6,7 @@ edition = "2021"
 [[bin]]
 doc = false
 name = "lrgs"
-path = "src/main.rs"
+path = "src/lrgs/main.rs"
 
 [[bin]]
 doc = false
@@ -21,7 +21,7 @@ default = []
 telemetry = ["opentelemetry-otlp"]
 
 [dependencies]
-kube = { version = "1.0.0", features = ["runtime", "derive"] }
+kube = { version = "1.0.0", features = ["runtime", "derive","admission"] }
 k8s-openapi = { version = "0.25.0", features = ["v1_30"] }
 tokio = { version = "1.45.0", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0.219", features = ["derive"] }
