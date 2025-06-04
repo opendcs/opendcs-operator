@@ -1,19 +1,16 @@
-
-use crate::api::{constants::LRGS_GROUP, v1::{dds_recv::{DdsConnection, TlsMode}, drgs::DrgsConnection, lrgs::{self, LrgsCluster}}};
-//use hickory_resolver::TokioAsyncResolver as Resolver;
 use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString};
-//use futures::{StreamExt, TryStreamExt};
 use kube::{
     api::{Api, ListParams, ObjectMeta}, Client
 };
+use opendcs_controllers::api::{constants::LRGS_GROUP, v1::{dds_recv::{DdsConnection, TlsMode}, drgs::DrgsConnection, lrgs::LrgsCluster}};
 use passwords::PasswordGenerator;
 use sha2::{Sha256, Digest};
 use simple_xml_builder::XMLElement;
-use tracing::{debug, warn};
-//, PostParams}};
+use tracing::debug;
 
-use std::{collections::BTreeMap, fmt::format, vec};
-use anyhow::{anyhow, Result};
+
+use std::{collections::BTreeMap, vec};
+use anyhow::Result;
 
 use super::password_file;
 

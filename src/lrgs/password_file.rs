@@ -1,5 +1,4 @@
 use sha1::{Digest, Sha1};
-use std::{fs::File, io::Write};
 
 pub struct DdsUser {
     pub username: String,

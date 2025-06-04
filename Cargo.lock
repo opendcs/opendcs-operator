@@ -1743,40 +1743,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
-name = "lrgs-config-controller"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "anyhow",
- "base16ct",
- "chrono",
- "clap",
- "env_logger",
- "futures",
- "garde",
- "jsonptr",
- "k8s-openapi",
- "kube",
- "lazy_static",
- "opentelemetry",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "passwords",
- "prometheus-client",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha1",
- "sha2",
- "simple-xml-builder",
- "tokio",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1863,6 +1829,40 @@ name = "once_cell_polyfill"
 version = "1.70.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4895175b425cb1f87721b59f0f286c2092bd4af812243672510e1ac53e2e0ad"
+
+[[package]]
+name = "opendcs-controllers"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "anyhow",
+ "base16ct",
+ "chrono",
+ "clap",
+ "env_logger",
+ "futures",
+ "garde",
+ "jsonptr",
+ "k8s-openapi",
+ "kube",
+ "lazy_static",
+ "opentelemetry",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "passwords",
+ "prometheus-client",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha1",
+ "sha2",
+ "simple-xml-builder",
+ "tokio",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "openssl-probe"

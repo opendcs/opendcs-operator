@@ -4,16 +4,15 @@ use chrono::Utc;
 use futures::StreamExt;
 use k8s_openapi::api::{apps::v1::StatefulSet, core::v1::{ConfigMap, Secret, Service}};
 use kube::{api::{Patch, PatchParams}, runtime::{controller::Action, reflector::ObjectRef, watcher, Controller}, Api, Client, Error, Resource, ResourceExt};
+use opendcs_controllers::{api::v1::{dds_recv::DdsConnection, lrgs::{LrgsCluster, LrgsClusterStatus}}, telemetry::{state::{Context, State}, telemetry}};
 use serde_json::json;
 use tracing::{error, field, info, instrument, warn, Span};
-
-use crate::{api::v1::{dds_recv::DdsConnection, lrgs::{LrgsCluster, LrgsClusterStatus}}, lrgs::{config::{create_lrgs_config, create_managed_users}, configmap::created_script_config_map, service::create_service, statefulset::create_statefulset, telemetry}};
-
-use super::state::{Context, State};
+use anyhow::anyhow;
+use crate::{config::{create_lrgs_config, create_managed_users}, configmap::created_script_config_map, service::create_service, statefulset::create_statefulset};
 
 
 
-pub async fn run(state: State) {
+pub async fn run(state: State<LrgsCluster>) {
     let client = Client::try_default().await.expect("failed to create kube Client");
     
     let secrets: Api<Secret> = Api::all(client.clone());
@@ -60,7 +59,7 @@ pub async fn run(state: State) {
 }
 
 #[instrument(skip(object, ctx), fields(trace_id))]
-async fn reconcile(object: Arc<LrgsCluster>, ctx: Arc<Context>) -> Result<Action, Error>  {
+async fn reconcile(object: Arc<LrgsCluster>, ctx: Arc<Context<LrgsCluster>>) -> Result<Action, Error>  {
     let trace_id = telemetry::get_trace_id();
     if trace_id != opentelemetry::trace::TraceId::INVALID {
         Span::current().record("trace_id", field::display(&trace_id));
@@ -133,8 +132,9 @@ async fn reconcile(object: Arc<LrgsCluster>, ctx: Arc<Context>) -> Result<Action
 
 
 
-fn error_policy(object: Arc<LrgsCluster>, err: &Error, ctx: Arc<Context>) -> Action {
+fn error_policy(object: Arc<LrgsCluster>, err: &kube::Error, ctx: Arc<Context<LrgsCluster>>) -> Action {
     warn!("reconcile failed: {:?}", err);
-    ctx.metrics.reconcile.set_failure(&object, err);
+    let e = anyhow!("Api error {:?}", err);
+    ctx.metrics.reconcile.set_failure(&object, &e);
     Action::requeue(Duration::from_secs(5 * 60))
 }

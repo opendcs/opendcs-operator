@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, fmt};
+use std::{collections::BTreeMap};
 
-use k8s_openapi::{api::core::v1::ConfigMap, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString};
+use k8s_openapi::{api::core::v1::ConfigMap, apimachinery::pkg::apis::meta::v1::OwnerReference};
 use kube::api::ObjectMeta;
 use sha1::Digest;
 use sha2::Sha256;

@@ -1,5 +1,5 @@
 [package]
-name = "lrgs-config-controller"
+name = "opendcs-controllers"
 version = "0.1.0"
 edition = "2021"
 

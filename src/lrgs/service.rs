@@ -1,14 +1,11 @@
 use std::collections::BTreeMap;
 
 use k8s_openapi::{api::core::v1::{Service, ServicePort, ServiceSpec}, apimachinery::pkg::{apis::meta::v1::OwnerReference, util::intstr::IntOrString}};
-use kube::{api::ObjectMeta, runtime::reflector::Lookup, Client, ResourceExt};
-
-use crate::api::v1::lrgs::LrgsCluster;
-
+use kube::{api::ObjectMeta, runtime::reflector::Lookup, Client};
+use opendcs_controllers::api::v1::lrgs::LrgsCluster;
 
 
-
-pub fn create_service(client: Client, lrgs_cluster: &LrgsCluster, owner_ref: &OwnerReference) -> Vec<Service> {
+pub fn create_service(_client: Client, lrgs_cluster: &LrgsCluster, owner_ref: &OwnerReference) -> Vec<Service> {
     let cluster_name = lrgs_cluster.name().unwrap();
     let ns: Option<String> = lrgs_cluster.metadata.namespace.clone();
     vec![
