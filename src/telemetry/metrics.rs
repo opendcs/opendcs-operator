@@ -5,10 +5,9 @@ use prometheus_client::{
     metrics::{counter::Counter, exemplar::HistogramWithExemplars, family::Family},
     registry::{Registry, Unit},
 };
+use std::marker::PhantomData;
 use std::sync::Arc;
 use tokio::time::Instant;
-use std::marker::PhantomData;
-
 
 #[derive(Clone)]
 pub struct Metrics<T: Clone + ResourceExt> {
@@ -31,7 +30,6 @@ impl<T: Clone + ResourceExt> Default for Metrics<T> {
     fn default() -> Self {
         Metrics::named("ctrl_reconcile")
     }
-   
 }
 
 #[derive(Clone, Hash, PartialEq, Eq, EncodeLabelSet, Debug, Default)]
@@ -56,8 +54,7 @@ pub struct ReconcileMetrics<T: Clone + ResourceExt> {
     pub runs: Counter,
     pub failures: Family<ErrorLabels, Counter>,
     pub duration: HistogramWithExemplars<TraceLabel>,
-    phantom: PhantomData<T> 
-
+    phantom: PhantomData<T>,
 }
 
 impl<T: Clone + ResourceExt> Default for ReconcileMetrics<T> {
@@ -65,7 +62,9 @@ impl<T: Clone + ResourceExt> Default for ReconcileMetrics<T> {
         Self {
             runs: Counter::default(),
             failures: Family::<ErrorLabels, Counter>::default(),
-            duration: HistogramWithExemplars::new([0.01, 0.1, 0.25, 0.5, 1., 5., 15., 60.].into_iter()),
+            duration: HistogramWithExemplars::new(
+                [0.01, 0.1, 0.25, 0.5, 1., 5., 15., 60.].into_iter(),
+            ),
             phantom: PhantomData,
         }
     }

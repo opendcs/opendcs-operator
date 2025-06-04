@@ -6,7 +6,6 @@ use kube::{CustomResource, KubeSchema};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, KubeSchema, Validate)]
 #[kube(
     group = "tsdb.opendcs.org",
@@ -26,18 +25,17 @@ pub struct OpenDcsDatabaseSpec {
     #[garde(skip)]
     /// Flyway placeholders for the given database. Cannot be changed after initial setup
     #[x_kube(validation = Rule::new("self == oldSelf").message("is immutable"))]
-    pub placeholders: BTreeMap<String,String>,
+    pub placeholders: BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
-pub  struct OpenDcsDatabaseStatus {
+pub struct OpenDcsDatabaseStatus {
     /// Applied Schema version as derived from the installed schema
     pub applied_schema_version: String,
     /// Current migration activity
     pub state: MigrationState,
     pub last_updated: Option<DateTime<Utc>>,
 }
-
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 /// Application Level Database State

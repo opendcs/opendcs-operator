@@ -28,9 +28,7 @@ fn to_line(user: &DdsUser) -> String {
 
 impl PasswordFile {
     pub fn new() -> PasswordFile {
-        PasswordFile {
-            users: vec![],
-        }
+        PasswordFile { users: vec![] }
     }
 
     pub fn add_user(&mut self, user: DdsUser) {
@@ -40,11 +38,10 @@ impl PasswordFile {
     pub fn to_string(&self) -> String {
         let mut buffer = String::new();
         for user in self.users.as_slice() {
-            buffer.push_str(format!("{}\n",to_line(user)).as_str());
+            buffer.push_str(format!("{}\n", to_line(user)).as_str());
         }
         return buffer;
     }
-
 }
 
 impl std::fmt::Display for PasswordFile {

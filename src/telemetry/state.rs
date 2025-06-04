@@ -1,7 +1,10 @@
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
-use kube::{runtime::events::{Recorder, Reporter}, Client, ResourceExt};
+use kube::{
+    runtime::events::{Recorder, Reporter},
+    Client, ResourceExt,
+};
 use serde::Serialize;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::metrics::Metrics;
@@ -30,7 +33,7 @@ pub struct State<T: Clone + ResourceExt> {
 }
 
 /// State wrapper around the controller outputs for the web server
-impl <T: Clone + ResourceExt> State<T> {
+impl<T: Clone + ResourceExt> State<T> {
     /// Metrics getter
     pub fn metrics(&self) -> String {
         let mut buffer = String::new();
@@ -55,9 +58,12 @@ impl <T: Clone + ResourceExt> State<T> {
     }
 }
 
-impl <T: Clone + ResourceExt> Default for State<T> {
+impl<T: Clone + ResourceExt> Default for State<T> {
     fn default() -> Self {
-        Self { diagnostics: Default::default(), metrics: Default::default() }
+        Self {
+            diagnostics: Default::default(),
+            metrics: Default::default(),
+        }
     }
 }
 

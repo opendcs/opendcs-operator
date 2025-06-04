@@ -5,7 +5,6 @@ use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-
 // <?xml version="1.0"?>
 // <drgsconf>
 
