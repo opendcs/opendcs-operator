@@ -33,7 +33,7 @@ pub struct OpenDcsDatabaseStatus {
     /// Applied Schema version as derived from the installed schema
     pub applied_schema_version: Option<String>,
     /// Current migration activity
-    pub state: MigrationState,
+    pub state: Option<MigrationState>,
     pub last_updated: Option<DateTime<Utc>>,
 }
 

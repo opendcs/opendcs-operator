@@ -22,7 +22,7 @@ use opendcs_controllers::{
 use serde_json::json;
 use tracing::{error, field, info, instrument, warn, Span};
 
-use crate::job;
+use crate::job::{self, MigrationJob};
 
 pub async fn run(state: State<OpenDcsDatabase>) {
     let client = Client::try_default()
@@ -75,11 +75,10 @@ async fn reconcile(
     let secret = &object.spec.database_secret;
     let patch_name = "database-controller";
 
-    let (old_state, new_state) = match object.status.as_ref() {
-        Some(_) => job::check_job(&object, &ns, &oref, client.clone()).await,
-        None => job::create_job(&object, &ns, &oref, client.clone()).await,
-    }.expect("No state update provided.");
-
+    let migration = MigrationJob::from(&object, client).await;
+    let (old_state, new_state) = 
+        migration.reconcile().await.expect("No state update provided.");
+    
     if old_state.is_none_or(|os| os != new_state) {    
         let new_status = Patch::Apply(json!({
             "apiVersion": "tsdb.opendcs.org/v1",
@@ -88,7 +87,7 @@ async fn reconcile(
                 last_updated: Some(Utc::now()),
                 // TODO: wait until actually applied
                 applied_schema_version: None,
-                state: new_state,
+                state: Some(new_state),
                 }
         }));
         
