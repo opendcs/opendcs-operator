@@ -1,0 +1,9 @@
+---
+apiVersion: tsdb.opendcs.org/v1
+kind: OpenDcsDatabase
+metadata:
+  name: local-database
+spec:
+  schemaVersion: ghcr.io/opendcs/migration:7.1.0
+  databaseSecret: test-secret
+  placeholders: {}

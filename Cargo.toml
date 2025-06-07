@@ -10,6 +10,11 @@ path = "src/lrgs/main.rs"
 
 [[bin]]
 doc = false
+name = "schema"
+path = "src/schema/main.rs"
+
+[[bin]]
+doc = false
 name = "crdgen"
 path = "src/crdgen.rs"
 

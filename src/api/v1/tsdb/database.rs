@@ -31,13 +31,13 @@ pub struct OpenDcsDatabaseSpec {
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
 pub struct OpenDcsDatabaseStatus {
     /// Applied Schema version as derived from the installed schema
-    pub applied_schema_version: String,
+    pub applied_schema_version: Option<String>,
     /// Current migration activity
     pub state: MigrationState,
     pub last_updated: Option<DateTime<Utc>>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
+#[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
 /// Application Level Database State
 pub enum MigrationState {
     /// Schema not yet installed.
