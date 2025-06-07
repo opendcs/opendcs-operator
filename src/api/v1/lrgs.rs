@@ -6,7 +6,6 @@ use kube::CustomResource;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema, Validate)]
 #[kube(
     group = "lrgs.opendcs.org",
@@ -28,7 +27,7 @@ pub struct LrgsClusterSpec {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
-pub  struct LrgsClusterStatus {
+pub struct LrgsClusterStatus {
     pub checksum: String,
     pub last_updated: Option<DateTime<Utc>>,
 }

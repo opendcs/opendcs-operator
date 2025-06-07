@@ -1,4 +1,3 @@
-use crate::{api::v1::lrgs::LrgsCluster, Error};
 use kube::ResourceExt;
 use opentelemetry::trace::TraceId;
 use prometheus_client::{
@@ -6,23 +5,30 @@ use prometheus_client::{
     metrics::{counter::Counter, exemplar::HistogramWithExemplars, family::Family},
     registry::{Registry, Unit},
 };
+use std::marker::PhantomData;
 use std::sync::Arc;
 use tokio::time::Instant;
 
 #[derive(Clone)]
-pub struct Metrics {
-    pub reconcile: ReconcileMetrics,
+pub struct Metrics<T: Clone + ResourceExt> {
+    pub reconcile: ReconcileMetrics<T>,
     pub registry: Arc<Registry>,
 }
 
-impl Default for Metrics {
-    fn default() -> Self {
-        let mut registry = Registry::with_prefix("lrgs_ctrl_reconcile");
+impl<T: Clone + ResourceExt> Metrics<T> {
+    fn named(controller_name: &str) -> Self {
+        let mut registry = Registry::with_prefix(format!("${controller_name}ctrl_reconcile"));
         let reconcile = ReconcileMetrics::default().register(&mut registry);
         Self {
             registry: Arc::new(registry),
             reconcile,
         }
+    }
+}
+
+impl<T: Clone + ResourceExt> Default for Metrics<T> {
+    fn default() -> Self {
+        Metrics::named("ctrl_reconcile")
     }
 }
 
@@ -44,18 +50,22 @@ impl TryFrom<&TraceId> for TraceLabel {
 }
 
 #[derive(Clone)]
-pub struct ReconcileMetrics {
+pub struct ReconcileMetrics<T: Clone + ResourceExt> {
     pub runs: Counter,
     pub failures: Family<ErrorLabels, Counter>,
     pub duration: HistogramWithExemplars<TraceLabel>,
+    phantom: PhantomData<T>,
 }
 
-impl Default for ReconcileMetrics {
+impl<T: Clone + ResourceExt> Default for ReconcileMetrics<T> {
     fn default() -> Self {
         Self {
             runs: Counter::default(),
             failures: Family::<ErrorLabels, Counter>::default(),
-            duration: HistogramWithExemplars::new([0.01, 0.1, 0.25, 0.5, 1., 5., 15., 60.].into_iter()),
+            duration: HistogramWithExemplars::new(
+                [0.01, 0.1, 0.25, 0.5, 1., 5., 15., 60.].into_iter(),
+            ),
+            phantom: PhantomData,
         }
     }
 }
@@ -66,7 +76,17 @@ pub struct ErrorLabels {
     pub error: String,
 }
 
-impl ReconcileMetrics {
+pub trait MetricLabel {
+    fn metric_label(&self) -> String;
+}
+
+impl MetricLabel for anyhow::Error {
+    fn metric_label(&self) -> String {
+        format!("{self:?}").to_lowercase()
+    }
+}
+
+impl<T: Clone + ResourceExt> ReconcileMetrics<T> {
     /// Register API metrics to start tracking them.
     pub fn register(self, r: &mut Registry) -> Self {
         r.register_with_unit(
@@ -80,11 +100,11 @@ impl ReconcileMetrics {
         self
     }
 
-    pub fn set_failure(&self, lrgs: &LrgsCluster, e: &Error) {
+    pub fn set_failure(&self, obj: &T, e: &anyhow::Error) {
         self.failures
             .get_or_create(&ErrorLabels {
-                instance: lrgs.name_any(),
-                error: "error_label".into() //e.metric_label(),
+                instance: obj.name_any(),
+                error: e.metric_label(),
             })
             .inc();
     }

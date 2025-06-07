@@ -57,7 +57,7 @@ fn port_default() -> i32 {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
-pub  enum TlsMode {
+pub enum TlsMode {
     NoTls,
     StartTls,
     Tls,
