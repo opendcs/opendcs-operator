@@ -7,6 +7,7 @@ use opendcs_controllers::telemetry::telemetry;
 
 mod controller;
 mod job;
+mod configmap;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

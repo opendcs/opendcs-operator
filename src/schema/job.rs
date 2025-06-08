@@ -1,12 +1,14 @@
 use std::clone;
 
 use chrono::Utc;
-use k8s_openapi::{api::{batch::v1::{Job, JobSpec}, core::v1::{Container, Event, PodSpec, PodTemplateSpec, SecurityContext}}, apimachinery::pkg::apis::meta::v1::OwnerReference};
+use k8s_openapi::{api::{batch::v1::{Job, JobSpec}, core::v1::{ConfigMap, ConfigMapVolumeSource, Container, EnvVar, Event, PodSpec, PodTemplateSpec, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::apis::meta::v1::OwnerReference};
 use kube::{api::{ObjectMeta, Patch, PatchParams, PostParams}, client, Api, Client, Resource, ResourceExt};
 use opendcs_controllers::api::v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus};
 use serde_json::json;
 use anyhow::Result;
 use tracing::info;
+
+use crate::configmap::create_script_config_map;
 
 
 
@@ -47,6 +49,10 @@ impl MigrationJob {
         
         info!("Creating schema migration job for {}/{}", &self.namespace, &self.name);
         let old_state = self.state.clone();
+        let mut env: Vec<EnvVar> = Vec::new();
+        self.database.spec.placeholders.iter().for_each(|(k,v)| {
+            env.push(EnvVar { name:k.clone(), value: Some(v.clone()), value_from: None });
+        });
         let job = Job {
             metadata: ObjectMeta { 
                 name: Some(format!("{}-database-migration", &self.name)),
@@ -63,23 +69,38 @@ impl MigrationJob {
                 ..Default::default()
             }),
             spec: Some(PodSpec {
-                containers:vec![
+                containers: vec![
                     Container {
-                    name: "lrgs".to_string(),
-                    image: Some(self.database.spec.schema_version.clone()),
-                    command: Some(vec![
-                        "/opt/opendcs/bin/manageDatabase".to_string(),
-                        // expand placeholders? or extra script (extra script probably better to
-                        // protect secrets.)
-                    ]),
-                    security_context: Some(SecurityContext {
-                        allow_privilege_escalation: Some(false),
-                        ..Default::default()
-                    }),
+                        name: "schema-migration".to_string(),
+                        image: Some(self.database.spec.schema_version.clone()),
+                        command: Some(vec![
+                            "/bin/bash".to_string(),
+                            "/scripts/schema.sh".to_string()
+                        ]),
+                        security_context: Some(SecurityContext {
+                            allow_privilege_escalation: Some(false),
+                            ..Default::default()
+                        }),
+                        env: Some(env),
+                        volume_mounts: Some(vec![
+                                VolumeMount {
+                                name: "schema-scripts".to_string(),
+                                mount_path: "/scripts".to_string(),
+                                ..Default::default()
+                            },
+                        ]),
                     ..Default::default()
-                }
-                    
+                    }
                 ],
+                volumes: Some(vec![
+                    Volume {
+                        name: "schema-scripts".to_string(),
+                        config_map: Some(ConfigMapVolumeSource {
+                            name: format!("{}-schema-scripts", self.owner_ref.name),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }]),
                 restart_policy: Some("Never".to_string()),
                 ..Default::default()
             })
@@ -89,9 +110,18 @@ impl MigrationJob {
             status: None };
         let patch_name = "database-controller";
         let pp = PatchParams::apply(patch_name);
+        let schema_config_map = create_script_config_map(self.namespace.clone(), &self.owner_ref);
+        let config_map_api: Api<ConfigMap> = Api::namespaced(self.client.clone(), &self.namespace);
+        config_map_api
+        .patch(
+            &schema_config_map.name_any(),
+            &pp,
+            &Patch::Apply(schema_config_map),
+        )
+        .await?;
         let jobs: Api<Job> = Api::namespaced(self.client.clone(), &self.namespace);
         jobs.patch(&job.name_any(), &pp, &Patch::Apply(job)).await?;
-        let events: Api<Event> =Api::namespaced(self.client.clone(), &self.namespace);
+        /*let events: Api<Event> =Api::namespaced(self.client.clone(), &self.namespace);
         events.create( &PostParams {
             dry_run: false,
             ..Default::default()
@@ -105,7 +135,7 @@ impl MigrationJob {
             action: Some("Migration Job created.".to_string()),
             message: Some("Migration Job created.".to_string()),
             ..Default::default()
-        }).await?;
+        }).await?;*/
         Ok((old_state,MigrationState::Fresh))
     }
 

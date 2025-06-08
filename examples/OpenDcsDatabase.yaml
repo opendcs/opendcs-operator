@@ -4,6 +4,9 @@ kind: OpenDcsDatabase
 metadata:
   name: local-database
 spec:
-  schemaVersion: ghcr.io/opendcs/migration:7.1.0
+  schemaVersion: ghcr.io/opendcs/compdepends:main-nightly
   databaseSecret: test-secret
-  placeholders: {}
+  placeholders: {
+    NUM_TS_TABLES: "1",
+    NUM_TEXT_TABLES: "1",
+  }
