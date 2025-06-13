@@ -1,7 +1,7 @@
 use std::clone;
 
 use chrono::Utc;
-use k8s_openapi::{api::{batch::v1::{Job, JobSpec}, core::v1::{ConfigMap, ConfigMapVolumeSource, Container, EnvVar, Event, PodSpec, PodTemplateSpec, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::apis::meta::v1::OwnerReference};
+use k8s_openapi::{api::{batch::v1::{Job, JobSpec}, core::v1::{ConfigMap, ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, Event, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::apis::meta::v1::OwnerReference};
 use kube::{api::{ObjectMeta, Patch, PatchParams, PostParams}, client, Api, Client, Resource, ResourceExt};
 use opendcs_controllers::api::v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus};
 use serde_json::json;
@@ -53,6 +53,16 @@ impl MigrationJob {
         self.database.spec.placeholders.iter().for_each(|(k,v)| {
             env.push(EnvVar { name:k.clone(), value: Some(v.clone()), value_from: None });
         });
+        env.push(EnvVar { 
+            name: "DATABASE_URL".to_string(), 
+            value_from: Some(EnvVarSource{
+                secret_key_ref: Some(SecretKeySelector {
+                   key: "jdbcUrl".to_string(),
+                   name: self.database.spec.database_secret.clone(),
+                   optional: Some(true)
+                }),
+                ..Default::default()
+            }), ..Default::default() });
         let job = Job {
             metadata: ObjectMeta { 
                 name: Some(format!("{}-database-migration", &self.name)),
@@ -83,9 +93,14 @@ impl MigrationJob {
                         }),
                         env: Some(env),
                         volume_mounts: Some(vec![
-                                VolumeMount {
+                            VolumeMount {
                                 name: "schema-scripts".to_string(),
                                 mount_path: "/scripts".to_string(),
+                                ..Default::default()
+                            },
+                            VolumeMount {
+                                name: "db-admin".to_string(),
+                                mount_path: "/secrets/db-admin".to_string(),
                                 ..Default::default()
                             },
                         ]),
@@ -100,7 +115,17 @@ impl MigrationJob {
                             ..Default::default()
                         }),
                         ..Default::default()
-                    }]),
+                    },
+                    Volume {
+                        name: "db-admin".to_string(),
+                        secret: Some(SecretVolumeSource { 
+                            secret_name: Some(self.database.spec.database_secret.clone()),
+                            optional: Some(false),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }
+                    ]),
                 restart_policy: Some("Never".to_string()),
                 ..Default::default()
             })
