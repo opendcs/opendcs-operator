@@ -11,11 +11,24 @@ echo "***** GENERATED PROPERTIES FILE *****"
 cat /dcs_user_dir/user.properties
 echo "***** END GENERATED PROPERTIES FILE *****"
 
+# TODO: Get all "placeholder. envvars and strip the placeholder. off and make list
+# to Apply to below command.
+
+PLACEHOLDERS=()
+unset IFS
+for var in $(compgen -e); do
+    name=$var
+    value=${!var}
+    if [[ "$name" =~ ^placeholder_.*$ ]]; then
+        PLACEHOLDERS+=("-D${name/placeholder_/}=${value}")
+    fi
+    
+done
+echo "Placeholders ${PLACEHOLDERS[@]}"
 exec /opt/opendcs/bin/manageDatabase -I OpenDCS-Postgres \
                -P /dcs_user_dir/user.properties \
                -username "`cat /secrets/db-admin/username`" \
                -password "`cat /secrets/db-admin/password`" \
-               -DNUM_TS_TABLES=${NUM_TS_TABLES} \
-               -DNUM_TEXT_SCHEMA=${NUM_TEXT_TABLES} \
                -appUsername "`cat /secrets/db-app/username`" \
-               -appPassword "`cat /secrets/db-app/password`"
+               -appPassword "`cat /secrets/db-app/password`" \
+               "${PLACEHOLDERS[@]}"

@@ -30,16 +30,7 @@ type: Opaque
 stringData:
   password: SecurePassword
   username: dcs
-  jdbcUrl: jdbc:postgres://postgres.svc.default.cluster.local:5432/dcs
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: app-test-secret
-type: Opaque
-stringData:
-  password: dcs_admin
-  username: dcs_admin
+  jdbcUrl: jdbc:postgresql://postgres.default.svc:5432/dcs
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -50,7 +41,7 @@ metadata:
 spec:
   storageClassName: standard
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 10Gi

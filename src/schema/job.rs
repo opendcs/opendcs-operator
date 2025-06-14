@@ -51,7 +51,8 @@ impl MigrationJob {
         let old_state = self.state.clone();
         let mut env: Vec<EnvVar> = Vec::new();
         self.database.spec.placeholders.iter().for_each(|(k,v)| {
-            env.push(EnvVar { name:k.clone(), value: Some(v.clone()), value_from: None });
+            info!("Adding {k}={v}");
+            env.push(EnvVar { name: format!("placeholder_{}",k), value: Some(v.clone()), value_from: None });
         });
         env.push(EnvVar { 
             name: "DATABASE_URL".to_string(), 
@@ -103,6 +104,11 @@ impl MigrationJob {
                                 mount_path: "/secrets/db-admin".to_string(),
                                 ..Default::default()
                             },
+                            VolumeMount {
+                                name: "db-app".to_string(),
+                                mount_path: "/secrets/db-app".to_string(),
+                                ..Default::default()
+                            },
                         ]),
                     ..Default::default()
                     }
@@ -120,6 +126,15 @@ impl MigrationJob {
                         name: "db-admin".to_string(),
                         secret: Some(SecretVolumeSource { 
                             secret_name: Some(self.database.spec.database_secret.clone()),
+                            optional: Some(false),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    },
+                    Volume {
+                        name: "db-app".to_string(),
+                        secret: Some(SecretVolumeSource { 
+                            secret_name: Some(format!("{}-app-user",self.owner_ref.name.clone())),
                             optional: Some(false),
                             ..Default::default()
                         }),
