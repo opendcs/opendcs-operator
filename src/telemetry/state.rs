@@ -1,8 +1,10 @@
-use std::sync::Arc;
 use chrono::{DateTime, Utc};
-use kube::{runtime::events::{Recorder, Reporter}, Client};
+use kube::{
+    runtime::events::{Recorder, Reporter},
+    Client, ResourceExt,
+};
 use serde::Serialize;
-use serde_json::json;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::metrics::Metrics;
@@ -10,7 +12,7 @@ use super::metrics::Metrics;
 // Context for our reconciler
 #[derive(Clone)]
 #[allow(unused)]
-pub struct Context {
+pub struct Context<T: Clone + ResourceExt> {
     /// Kubernetes client
     pub client: Client,
     /// Event recorder
@@ -18,19 +20,20 @@ pub struct Context {
     /// Diagnostics read by the web server
     pub diagnostics: Arc<RwLock<Diagnostics>>,
     /// Prometheus metrics
-    pub metrics: Arc<Metrics>,
+    pub metrics: Arc<Metrics<T>>,
 }
 
 /// State shared between the controller and the web server
-#[derive(Clone, Default)]
-pub struct State {
+#[derive(Clone)]
+pub struct State<T: Clone + ResourceExt> {
     /// Diagnostics read by the web server
     pub diagnostics: Arc<RwLock<Diagnostics>>,
     /// Prometheus metrics
-    pub metrics: Arc<Metrics>,
+    pub metrics: Arc<Metrics<T>>,
 }
+
 /// State wrapper around the controller outputs for the web server
-impl State {
+impl<T: Clone + ResourceExt> State<T> {
     /// Metrics getter
     pub fn metrics(&self) -> String {
         let mut buffer = String::new();
@@ -45,7 +48,7 @@ impl State {
     }
 
     // Create a Controller Context that can update State
-    pub async fn to_context(&self, client: Client) -> Arc<Context> {
+    pub async fn to_context(&self, client: Client) -> Arc<Context<T>> {
         Arc::new(Context {
             client: client.clone(),
             recorder: self.diagnostics.read().await.recorder(client),
@@ -54,6 +57,16 @@ impl State {
         })
     }
 }
+
+impl<T: Clone + ResourceExt> Default for State<T> {
+    fn default() -> Self {
+        Self {
+            diagnostics: Default::default(),
+            metrics: Default::default(),
+        }
+    }
+}
+
 /// Diagnostics to be exposed by the web server
 #[derive(Clone, Serialize)]
 pub struct Diagnostics {

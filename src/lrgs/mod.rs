@@ -5,5 +5,5 @@ pub mod configmap;
 pub mod service;
 pub mod controller;
 pub mod state;
-pub mod telemetry;
-pub mod metrics;
+
+pub mod main;
