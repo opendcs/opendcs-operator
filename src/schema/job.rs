@@ -18,6 +18,7 @@ pub struct MigrationJob {
     job: Option<Job>,
     name: String,
     namespace: String,
+    job_name: String,
     status: Option<OpenDcsDatabaseStatus>,
     state: Option<MigrationState>,
     client: Client
@@ -25,22 +26,30 @@ pub struct MigrationJob {
 
 impl MigrationJob {
     pub async fn from(database: &OpenDcsDatabase, client: &Client) -> MigrationJob {
+        let job_name = format!("{}-database-migration", database.name_any());
+        let jobs: Api<Job> = Api::namespaced(client.clone(), &database.namespace().unwrap_or("default".to_string()));
+
+
         MigrationJob {
             client: client.clone(),
             database: database.clone(),
             owner_ref: database.controller_owner_ref(&()).unwrap(),
-            job: None,
+            job: jobs.get_opt(&job_name).await.unwrap_or(None),
             name: database.name_any().clone(),
             namespace: database.namespace().unwrap_or("default".to_string()),
+            job_name: job_name.clone(),
             status: database.status.clone(),
             state: database.status.as_ref().and_then(|s| s.state.clone()),
         }
     }
 
     pub async fn reconcile(&self) -> Result<(Option<MigrationState>,MigrationState)> {
-        match self.status.as_ref() {
-        Some(_) => self.check_job().await,
-        None => self.create_job().await,
+        if self.status.as_ref()
+               .is_none_or(|status|
+                            status.applied_schema_version.as_deref() != Some(&self.database.spec.schema_version)) {
+            self.create_job().await
+        } else {
+            self.check_job().await
         }
     }
 
@@ -66,7 +75,7 @@ impl MigrationJob {
             }), ..Default::default() });
         let job = Job {
             metadata: ObjectMeta { 
-                name: Some(format!("{}-database-migration", &self.name)),
+                name: Some(self.job_name.clone()),
                 namespace: Some(self.namespace.clone()),
                 owner_references: Some(vec![self.owner_ref.clone()]),
                 ..Default::default()
@@ -74,7 +83,7 @@ impl MigrationJob {
             spec: Some(JobSpec{
                 template: PodTemplateSpec {
                     metadata: Some(ObjectMeta { 
-                name: Some(format!("{}-database-migration", &self.name)),
+                name: Some(self.job_name.clone()),
                 namespace: Some(self.namespace.clone()),
                 owner_references: Some(vec![self.owner_ref.clone()]),
                 ..Default::default()
@@ -180,9 +189,23 @@ impl MigrationJob {
     }
 
     pub async fn check_job(&self) -> Result<(Option<MigrationState>,MigrationState)> {
-        
         info!("Checking on schema migration job for {}/{}", &self.namespace, &self.name);
         let old_state= self.state.clone();
-        return Ok((old_state,MigrationState::Migrating));
-}
+
+        match &self.job {
+            Some(job) => {
+                let status = job.status.as_ref().unwrap();
+                let ready = status.ready.unwrap_or(0);
+                let success = status.succeeded.unwrap_or(0);
+                if ready > 0 {
+                    Ok((old_state,MigrationState::Migrating))
+                } else if success > 0 {
+                    Ok((old_state,MigrationState::Ready))
+                } else {
+                    Ok((old_state,MigrationState::PreparingToMigrate))
+                }
+            },
+            None => Ok((old_state,MigrationState::Fresh))
+        }
+    }
 }

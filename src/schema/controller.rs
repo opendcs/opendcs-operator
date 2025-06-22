@@ -122,14 +122,18 @@ async fn reconcile(
         migration.reconcile().await.expect("No state update provided.");
 
     
-    if old_state.is_none_or(|os| os != new_state) {    
+    if old_state.as_ref().is_none_or(|os| os != &new_state) {
+        let version = match &new_state {
+            MigrationState::Ready => Some(object.spec.schema_version.clone()),
+            _ => None,
+        };
+        info!("Updating schema version to {:?}", version);
         let new_status = Patch::Apply(json!({
             "apiVersion": "tsdb.opendcs.org/v1",
             "kind": "OpenDcsDatabase",
             "status": OpenDcsDatabaseStatus {
                 last_updated: Some(Utc::now()),
-                // TODO: wait until actually applied
-                applied_schema_version: None,
+                applied_schema_version: version,
                 state: Some(new_state),
                 }
         }));
