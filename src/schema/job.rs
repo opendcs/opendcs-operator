@@ -1,10 +1,7 @@
-use std::clone;
 
-use chrono::Utc;
-use k8s_openapi::{api::{batch::v1::{Job, JobSpec}, core::v1::{ConfigMap, ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, Event, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::apis::meta::v1::OwnerReference};
-use kube::{api::{ObjectMeta, Patch, PatchParams, PostParams}, client, Api, Client, Resource, ResourceExt};
-use opendcs_controllers::api::v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus};
-use serde_json::json;
+use k8s_openapi::{api::{batch::v1::{Job, JobSpec}, core::v1::{ConfigMap, ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, Pod, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::apis::meta::v1::OwnerReference};
+use kube::{api::{ListParams, ObjectMeta, Patch, PatchParams}, Api, Client, Resource, ResourceExt};
+use opendcs_controllers::api::{constants::TSDB_GROUP, v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus}};
 use anyhow::Result;
 use tracing::info;
 
@@ -43,7 +40,7 @@ impl MigrationJob {
         }
     }
 
-    pub async fn reconcile(&self) -> Result<(Option<MigrationState>,MigrationState)> {
+    pub async fn reconcile(&self) -> Result<(MigrationState,MigrationState)> {
         if self.status.as_ref()
                .is_none_or(|status|
                             status.applied_schema_version.as_deref() != Some(&self.database.spec.schema_version)) {
@@ -54,10 +51,15 @@ impl MigrationJob {
     }
 
 
-    pub async fn create_job(&self) -> Result<(Option<MigrationState>,MigrationState)> {
-        
+    pub async fn create_job(&self) -> Result<(MigrationState,MigrationState)> {
+        let pods: Api<Pod> = Api::namespaced(self.client.clone(), &self.namespace);
+        let active_pods = 
+            pods.list(&ListParams::default().labels(&format!("{}/for-database={}", TSDB_GROUP.as_str(), self.name))).await?;
+        if active_pods.items.len() > 0 {
+            return Ok((MigrationState::PreparingToMigrate,MigrationState::PreparingToMigrate))
+        }
         info!("Creating schema migration job for {}/{}", &self.namespace, &self.name);
-        let old_state = self.state.clone();
+        let old_state = self.state.clone().unwrap_or(MigrationState::Fresh);
         let mut env: Vec<EnvVar> = Vec::new();
         self.database.spec.placeholders.iter().for_each(|(k,v)| {
             info!("Adding {k}={v}");
@@ -188,9 +190,9 @@ impl MigrationJob {
         Ok((old_state,MigrationState::Fresh))
     }
 
-    pub async fn check_job(&self) -> Result<(Option<MigrationState>,MigrationState)> {
+    pub async fn check_job(&self) -> Result<(MigrationState,MigrationState)> {
         info!("Checking on schema migration job for {}/{}", &self.namespace, &self.name);
-        let old_state= self.state.clone();
+        let old_state= self.state.clone().unwrap_or(MigrationState::Fresh);
 
         match &self.job {
             Some(job) => {

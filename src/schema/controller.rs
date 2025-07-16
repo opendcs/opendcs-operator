@@ -4,12 +4,12 @@ use anyhow::anyhow;
 use chrono::Utc;
 use futures::StreamExt;
 use k8s_openapi::{api::{
-    batch::v1::{Job, JobSpec},
-    core::v1::{ConfigMap, Container, PodSpec, PodTemplateSpec, Secret, SecurityContext, Service},
+    batch::v1::Job,
+    core::v1::Secret,
 }, ByteString};
 use kube::{
-    api::{ObjectMeta, Patch, PatchParams, PostParams},
-    runtime::{controller::Action, reflector::ObjectRef, watcher, Controller},
+    api::{ObjectMeta, Patch, PatchParams},
+    runtime::{controller::Action, watcher, Controller},
     Api, Client, Error, Resource, ResourceExt,
 };
 use opendcs_controllers::{
@@ -21,14 +21,12 @@ use opendcs_controllers::{
 };
 use passwords::PasswordGenerator;
 use serde_json::json;
-use tracing::{error, field, info, instrument, warn, Span};
+use tracing::{field, info, instrument, warn, Span};
 
-use crate::job::{self, MigrationJob};
+use crate::job::{MigrationJob};
 
-pub async fn run(state: State<OpenDcsDatabase>) {
-    let client = Client::try_default()
-        .await
-        .expect("failed to create kube Client");
+pub async fn run(state: State<OpenDcsDatabase>, client: Client) {
+    
     let databases: Api<OpenDcsDatabase> = Api::all(client.clone());
     let jobs: Api<Job> = Api::all(client.clone());
     let secrets: Api<Secret> = Api::all(client.clone());
@@ -122,8 +120,8 @@ async fn reconcile(
         migration.reconcile().await.expect("No state update provided.");
 
     
-    if old_state.as_ref().is_none_or(|os| os != &new_state) {
-        let version = match &new_state {
+    if old_state == MigrationState::Fresh || old_state != new_state {
+        let version = match new_state {
             MigrationState::Ready => Some(object.spec.schema_version.clone()),
             _ => None,
         };
