@@ -7,12 +7,14 @@ mod tests {
     
 
     use ctor::dtor;
+    use serde::{Deserialize, Serialize};
+    use serde_yaml::Value;
     use std::{future::Future, time::Duration};
 
     use actix_web::web::Data;
     use futures::{executor::block_on, FutureExt};
-    use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
-    use kube::{api::PostParams, config::{KubeConfigOptions, Kubeconfig}, Api, Client, Config, CustomResourceExt};
+    use k8s_openapi::{api::{apps::v1::Deployment, core::v1::Pod}, apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition, Resource};
+    use kube::{api::{DynamicObject, Object, PostParams}, config::{KubeConfigOptions, Kubeconfig}, discovery, Api, Client, Config, CustomResourceExt};
     use opendcs_controllers::{api::{self, v1::tsdb::database::OpenDcsDatabase}, telemetry::state::State};
     use rstest::{fixture, rstest};
     use testcontainers_modules::{
@@ -53,6 +55,13 @@ mod tests {
         }
     }
 
+    impl Drop for K8s {
+        fn drop(&mut self) {
+            println!("Stopping k3s");
+            let _ = block_on(self._instance.stop());
+        }
+    }
+
     
     static K8S_INST: OnceCell<K8s> = OnceCell::const_new();
     
@@ -69,31 +78,27 @@ mod tests {
 
     #[dtor]
     fn on_shutdown() {
-        println!("Stopping k3s");
-        async {
-            let result = match K8S_INST.get() {
-                Some(inst) => inst._instance.stop().await,
-                None => Result::Ok(()),
-            };
-        };
-        ()
+       
+        //let _= K8S_INST.get_mut();
     }
 
     #[rstest]
     #[tokio::test]
-   async fn test_test(#[future] k8s_info: &K8s) {
-    let client = k8s_info.await.get_client();
-    println!("got client");
-    let state: State<OpenDcsDatabase> = State::default();
-    let _data = Data::new(state.clone());
-    let controller = controller::run(state.clone(),client.clone());
-    println!("getting crd api");
-    let crd_api: Api<CustomResourceDefinition> = Api::all(client.clone());
-    let pp = PostParams::default();
-    println!("applying crd");
-    crd_api.create(&pp, &api::v1::tsdb::database::OpenDcsDatabase::crd()).await.expect("can't make database crd.");
-    println!("done");
-controller.now_or_never();
+    async fn test_simple_migration(#[future] k8s_info: &K8s) {
+        let client = k8s_info.await.get_client();
+        println!("got client");
+        let state: State<OpenDcsDatabase> = State::default();
+        let _data = Data::new(state.clone());
+        let controller = controller::run(state.clone(),client.clone());
+        println!("getting crd api");
+        let crd_api: Api<CustomResourceDefinition> = Api::all(client.clone());
+        let pp = PostParams::default();
+        println!("applying crd");
+        crd_api.create(&pp, &api::v1::tsdb::database::OpenDcsDatabase::crd()).await.expect("can't make database crd.");
+        println!("done");
+        //let odcs_api: Api<api::v1::tsdb::database::OpenDcsDatabase> = Api::namespaced(client.clone(), "default");
+        //odcs_api.create(pp, OpenDcsDatabase { metadata: (), spec: api::v1::tsdb::database::OpenDcsDatabaseSpec { schema_version: (), database_secret: (), placeholders: () }, status: () });
+        controller.now_or_never();
     }
 
     // taken from testcontainers-k3s
