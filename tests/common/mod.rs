@@ -1,15 +1,17 @@
+
+pub mod database;
 #[cfg(test)]
 pub mod tests {
     
-
+    
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     
 
-    use ctor::dtor;
+    use ctor::{ctor, dtor};
     use serde::{Deserialize, Serialize};
     use serde_yaml::Value;
-    use std::{future::Future, time::Duration};
+    use std::{future::Future, process::Command, time::Duration};
 
     use actix_web::web::Data;
     use futures::{executor::block_on, FutureExt};
@@ -27,27 +29,22 @@ pub mod tests {
     
 
     pub struct K8s {
-        client: Client,
-        _instance: ContainerAsync<K3s>
+        client: Client
     }
 
     impl K8s {
         pub async fn new() -> K8s {
-            use std::env::temp_dir;
-
-            let k3s_path = &temp_dir();
-            println!("starting k3s");
-            let k3s_instance = K3s::default()
-                .with_conf_mount(k3s_path)
-                .with_privileged(true)
-                .with_userns_mode("host")
-                //.with_startup_timeout(Duration::from_secs(60))
-                .start().await
-                .unwrap();
-            println!("getting client");
-            let client = get_kube_client(&k3s_instance).await.expect("can't get client");
-            println!("returning set");
-            return K8s {client: client, _instance: k3s_instance };
+            let result = Command::new("sh").args(["-c", "kind create cluster --name odcs-test"]).output().expect("Failed to start kind");
+            println!("{result:?}");
+            let kconfig = Kubeconfig::read().expect("unable to read any kubernetes config files");
+            let opts = KubeConfigOptions {
+                // kind prefixes everything with kind-
+                cluster: Some("kind-odcs-test".into()),
+                ..Default::default()
+            };
+            let config = Config::from_custom_kubeconfig(kconfig, &opts).await.expect("Unable to create config.");
+            let client = Client::try_from(config).expect("Unable to create client");
+            return K8s {client: client};
         }
 
         pub fn get_client(&self) -> Client {
@@ -57,8 +54,8 @@ pub mod tests {
 
     impl Drop for K8s {
         fn drop(&mut self) {
-            println!("Stopping k3s");
-            let _ = block_on(self._instance.stop());
+            println!("Stopping kind");
+           
         }
     }
 
@@ -76,9 +73,18 @@ pub mod tests {
         
     }
 
+    #[ctor]
+    fn on_startup() {
+        if CryptoProvider::get_default().is_none() {
+            rustls::crypto::ring::default_provider()
+                .install_default()
+                .expect("Error initializing rustls provider");
+        }
+    }
+
     #[dtor]
     fn on_shutdown() {
-     
+        println!("Would stop kind")
         //let _= K8S_INST.get_mut();
     }
 
@@ -87,11 +93,7 @@ pub mod tests {
     pub async fn get_kube_client(
         container: &ContainerAsync<K3s>,
     ) -> Result<kube::Client, Box<dyn std::error::Error + 'static>> {
-        if CryptoProvider::get_default().is_none() {
-            rustls::crypto::ring::default_provider()
-                .install_default()
-                .expect("Error initializing rustls provider");
-        }
+        
 
         let conf_yaml = container.image().read_kube_config()?;
 
