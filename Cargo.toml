@@ -6,12 +6,12 @@ edition = "2021"
 [[bin]]
 doc = false
 name = "lrgs"
-path = "src/lrgs/main.rs"
+path = "src/controllers/lrgs/main.rs"
 
 [[bin]]
 doc = false
 name = "schema"
-path = "src/schema/main.rs"
+path = "src/controllers/schema/main.rs"
 
 [[bin]]
 doc = false

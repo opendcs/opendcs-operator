@@ -6,10 +6,7 @@ use opendcs_controllers::api::v1::tsdb::database::OpenDcsDatabase;
 use opendcs_controllers::telemetry::state::State;
 use opendcs_controllers::telemetry::telemetry;
 
-mod controller;
-mod job;
-mod configmap;
-mod tests;
+use opendcs_controllers::schema::controller;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

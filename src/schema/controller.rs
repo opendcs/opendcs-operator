@@ -12,18 +12,17 @@ use kube::{
     runtime::{controller::Action, watcher, Controller},
     Api, Client, Error, Resource, ResourceExt,
 };
-use opendcs_controllers::{
-    api::{constants::TSDB_GROUP, v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus}},
-    telemetry::{
+use crate::{
+    api::{constants::TSDB_GROUP, v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus}}, schema::job::MigrationJob, telemetry::{
         state::{Context, State},
         telemetry,
-    },
+    }
 };
 use passwords::PasswordGenerator;
 use serde_json::json;
 use tracing::{field, info, instrument, warn, Span};
 
-use crate::job::{MigrationJob};
+
 
 pub async fn run(state: State<OpenDcsDatabase>, client: Client) {
     

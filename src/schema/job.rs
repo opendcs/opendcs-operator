@@ -1,11 +1,11 @@
 
 use k8s_openapi::{api::{batch::v1::{Job, JobSpec}, core::v1::{ConfigMap, ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, Pod, PodSpec, PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume, VolumeMount}}, apimachinery::pkg::apis::meta::v1::OwnerReference};
 use kube::{api::{ListParams, ObjectMeta, Patch, PatchParams}, Api, Client, Resource, ResourceExt};
-use opendcs_controllers::api::{constants::TSDB_GROUP, v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus}};
+use crate::{api::{constants::TSDB_GROUP, v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus}}, schema::configmap::create_script_config_map};
 use anyhow::Result;
 use tracing::info;
 
-use crate::configmap::create_script_config_map;
+
 
 
 

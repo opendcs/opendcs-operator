@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+pub mod tests {
     
 
 
@@ -15,7 +15,7 @@ mod tests {
     use futures::{executor::block_on, FutureExt};
     use k8s_openapi::{api::{apps::v1::Deployment, core::v1::Pod}, apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition, Resource};
     use kube::{api::{DynamicObject, Object, PostParams}, config::{KubeConfigOptions, Kubeconfig}, discovery, Api, Client, Config, CustomResourceExt};
-    use opendcs_controllers::{api::{self, v1::tsdb::database::OpenDcsDatabase}, telemetry::state::State};
+    use opendcs_controllers::{api::{self, v1::tsdb::database::OpenDcsDatabase}, schema::controller, telemetry::state::State};
     use rstest::{fixture, rstest};
     use testcontainers_modules::{
         k3s::{K3s, KUBE_SECURE_PORT},
@@ -24,7 +24,7 @@ mod tests {
     use rustls::crypto::CryptoProvider;
     use tokio::sync::OnceCell;
 
-    use crate::controller;
+    
 
     pub struct K8s {
         client: Client,
@@ -68,7 +68,7 @@ mod tests {
 
     #[fixture]
     //#[once]
-    async fn k8s_info() -> &'static K8s {
+    pub async fn k8s_info() -> &'static K8s {
         println!("hello!");
         K8S_INST.get_or_init(|| async {
             K8s::new().await
@@ -78,27 +78,8 @@ mod tests {
 
     #[dtor]
     fn on_shutdown() {
-       
+     
         //let _= K8S_INST.get_mut();
-    }
-
-    #[rstest]
-    #[tokio::test]
-    async fn test_simple_migration(#[future] k8s_info: &K8s) {
-        let client = k8s_info.await.get_client();
-        println!("got client");
-        let state: State<OpenDcsDatabase> = State::default();
-        let _data = Data::new(state.clone());
-        let controller = controller::run(state.clone(),client.clone());
-        println!("getting crd api");
-        let crd_api: Api<CustomResourceDefinition> = Api::all(client.clone());
-        let pp = PostParams::default();
-        println!("applying crd");
-        crd_api.create(&pp, &api::v1::tsdb::database::OpenDcsDatabase::crd()).await.expect("can't make database crd.");
-        println!("done");
-        //let odcs_api: Api<api::v1::tsdb::database::OpenDcsDatabase> = Api::namespaced(client.clone(), "default");
-        //odcs_api.create(pp, OpenDcsDatabase { metadata: (), spec: api::v1::tsdb::database::OpenDcsDatabaseSpec { schema_version: (), database_secret: (), placeholders: () }, status: () });
-        controller.now_or_never();
     }
 
     // taken from testcontainers-k3s

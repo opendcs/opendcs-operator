@@ -5,7 +5,7 @@ use k8s_openapi::{
     apimachinery::pkg::{apis::meta::v1::OwnerReference, util::intstr::IntOrString},
 };
 use kube::{api::ObjectMeta, runtime::reflector::Lookup, Client};
-use opendcs_controllers::api::v1::lrgs::LrgsCluster;
+use crate::api::v1::lrgs::LrgsCluster;
 
 pub fn create_service(
     _client: Client,

@@ -5,7 +5,7 @@ use kube::{
     api::{Api, ListParams, ObjectMeta},
     Client,
 };
-use opendcs_controllers::api::{
+use crate::api::{
     constants::LRGS_GROUP,
     v1::{
         dds_recv::{DdsConnection, TlsMode},

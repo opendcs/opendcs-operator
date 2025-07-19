@@ -2,15 +2,10 @@ use actix_web::{
     get, middleware, web::Data, App, HttpRequest, HttpResponse, HttpServer, Responder,
 };
 use opendcs_controllers::api::v1::lrgs::LrgsCluster;
+use opendcs_controllers::lrgs::controller;
 use opendcs_controllers::telemetry::state::State;
 use opendcs_controllers::telemetry::telemetry;
 
-mod config;
-mod configmap;
-mod controller;
-mod password_file;
-mod service;
-mod statefulset;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

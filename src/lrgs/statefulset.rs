@@ -14,8 +14,10 @@ use k8s_openapi::{
     },
 };
 use kube::{api::ObjectMeta, Resource, ResourceExt};
-use opendcs_controllers::api::{constants::LRGS_GROUP, v1::lrgs::LrgsCluster};
+
 use std::collections::BTreeMap;
+
+use crate::api::{constants::LRGS_GROUP, v1::lrgs::LrgsCluster};
 
 pub fn create_statefulset(
     lrgs_spec: &LrgsCluster,
