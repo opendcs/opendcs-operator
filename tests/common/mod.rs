@@ -84,31 +84,7 @@ pub mod tests {
 
     #[dtor]
     fn on_shutdown() {
-        println!("Would stop kind")
-        //let _= K8S_INST.get_mut();
-    }
-
-    // taken from testcontainers-k3s
-    //  module test https://docs.rs/crate/testcontainers-modules/latest/source/src/k3s/mod.rs#235
-    pub async fn get_kube_client(
-        container: &ContainerAsync<K3s>,
-    ) -> Result<kube::Client, Box<dyn std::error::Error + 'static>> {
-        
-
-        let conf_yaml = container.image().read_kube_config()?;
-
-        let mut config = Kubeconfig::from_yaml(&conf_yaml).expect("Error loading kube config");
-
-        let port = container.get_host_port_ipv4(KUBE_SECURE_PORT).await?;
-        config.clusters.iter_mut().for_each(|cluster| {
-            if let Some(server) = cluster.cluster.as_mut().and_then(|c| c.server.as_mut()) {
-                *server = format!("https://127.0.0.1:{port}")
-            }
-        });
-
-        let client_config =
-            Config::from_custom_kubeconfig(config, &KubeConfigOptions::default()).await?;
-
-        Ok(kube::Client::try_from(client_config)?)
+       let result = Command::new("sh").args(["-c", "kind delete cluster --name odcs-test"]).output().expect("Failed to start kind");
+       println!("{result:?}");
     }
 }
