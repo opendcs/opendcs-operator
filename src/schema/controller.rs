@@ -124,7 +124,7 @@ async fn reconcile(
             MigrationState::Ready => Some(object.spec.schema_version.clone()),
             _ => None,
         };
-        info!("Updating schema version to {:?}", version);
+        info!("Updating schema version to {:?} state = {:?}", version, new_state);
         let new_status = Patch::Apply(json!({
             "apiVersion": "tsdb.opendcs.org/v1",
             "kind": "OpenDcsDatabase",

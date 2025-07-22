@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, fmt::Debug};
 
 use chrono::{DateTime, Utc};
 use garde::Validate;
-use kube::{CustomResource, KubeSchema};
+use kube::{runtime::wait::Condition, CustomResource, KubeSchema};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -50,4 +50,14 @@ pub enum MigrationState {
     Ready,
     /// Schema migration failed and requires user intervention..
     Failed,
+}
+
+
+impl Condition<OpenDcsDatabase> for OpenDcsDatabase {
+    fn matches_object(&self, obj: Option<&OpenDcsDatabase>) -> bool {
+        match obj {
+            Some(other) => self.metadata.name == other.metadata.name,
+            _ => false
+        }
+    }
 }

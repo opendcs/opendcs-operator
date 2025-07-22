@@ -9,15 +9,16 @@ pub mod tests {
     
 
     use ctor::{ctor, dtor};
-    use serde::{Deserialize, Serialize};
-    use serde_yaml::Value;
+
+    use tracing_subscriber::{prelude::*, EnvFilter, Registry};
+
     use std::{future::Future, process::Command, time::Duration};
 
     use actix_web::web::Data;
     use futures::{executor::block_on, FutureExt};
     use k8s_openapi::{api::{apps::v1::Deployment, core::v1::Pod}, apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition, Resource};
     use kube::{api::{DynamicObject, Object, PostParams}, config::{KubeConfigOptions, Kubeconfig}, discovery, Api, Client, Config, CustomResourceExt};
-    use opendcs_controllers::{api::{self, v1::tsdb::database::OpenDcsDatabase}, schema::controller, telemetry::state::State};
+    use opendcs_controllers::{api::{self, v1::tsdb::database::OpenDcsDatabase}, schema::controller, telemetry::{state::State, telemetry}};
     use rstest::{fixture, rstest};
     use testcontainers_modules::{
         k3s::{K3s, KUBE_SECURE_PORT},
@@ -80,6 +81,21 @@ pub mod tests {
                 .install_default()
                 .expect("Error initializing rustls provider");
         }
+
+        #[cfg(feature = "telemetry")]
+        let otel = tracing_opentelemetry::OpenTelemetryLayer::new(init_tracer());
+
+        let logger = tracing_subscriber::fmt::layer().compact();
+        let env_filter = EnvFilter::try_from_default_env()
+            .or(EnvFilter::try_new("info"))
+            .unwrap();
+
+        // Decide on layers
+        let reg = Registry::default();
+        #[cfg(feature = "telemetry")]
+        reg.with(env_filter).with(logger).with(otel).init();
+        #[cfg(not(feature = "telemetry"))]
+        reg.with(env_filter).with(logger).init();
     }
 
     #[dtor]
