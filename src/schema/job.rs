@@ -41,12 +41,18 @@ impl MigrationJob {
     }
 
     pub async fn reconcile(&self) -> Result<(MigrationState,MigrationState)> {
-        if self.status.as_ref()
-               .is_none_or(|status|
-                            (status.applied_schema_version.as_deref() != Some(&self.database.spec.schema_version)) && status.state == Some(MigrationState::Fresh)) {
-            self.create_job().await
-        } else {
-            self.check_job().await
+        let status = self.status.as_ref();
+        let schema_version = self.database.spec.schema_version.clone();
+        match status {
+            Some(status) if status.state == None => {
+                self.create_job().await
+            },
+            Some(status) if status.state == Some(MigrationState::Ready)
+                 && status.applied_schema_version != Some(schema_version) => {
+                self.create_job().await
+            }
+            None => self.create_job().await,
+            _ => self.check_job().await
         }
     }
 
@@ -193,7 +199,6 @@ impl MigrationJob {
     pub async fn check_job(&self) -> Result<(MigrationState,MigrationState)> {
         info!("Checking on schema migration job for {}/{}", &self.namespace, &self.name);
         let old_state= self.state.clone().unwrap_or(MigrationState::Fresh);
-        info!("job {:?}", self.job);
         match &self.job {
             Some(job) => {
                 let status = job.status.as_ref().unwrap();
