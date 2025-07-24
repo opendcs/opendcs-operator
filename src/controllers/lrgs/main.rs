@@ -6,7 +6,6 @@ use opendcs_controllers::lrgs::controller;
 use opendcs_controllers::telemetry::state::State;
 use opendcs_controllers::telemetry::telemetry;
 
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     telemetry::init().await;

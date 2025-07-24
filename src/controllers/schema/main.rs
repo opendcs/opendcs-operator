@@ -16,7 +16,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("failed to create kube Client");
     let state: State<OpenDcsDatabase> = State::default();
     let data = Data::new(state.clone());
-    let controller = controller::run(state.clone(),client);
+    let controller = controller::run(state.clone(), client);
     let server = HttpServer::new(move || {
         App::new()
             .app_data(data.clone())

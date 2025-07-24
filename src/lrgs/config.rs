@@ -1,10 +1,3 @@
-use k8s_openapi::{
-    api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString,
-};
-use kube::{
-    api::{Api, ListParams, ObjectMeta},
-    Client,
-};
 use crate::api::{
     constants::LRGS_GROUP,
     v1::{
@@ -12,6 +5,13 @@ use crate::api::{
         drgs::DrgsConnection,
         lrgs::LrgsCluster,
     },
+};
+use k8s_openapi::{
+    api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString,
+};
+use kube::{
+    api::{Api, ListParams, ObjectMeta},
+    Client,
 };
 use passwords::PasswordGenerator;
 use sha2::{Digest, Sha256};

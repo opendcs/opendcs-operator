@@ -1,6 +1,21 @@
 use std::{sync::Arc, time::Duration};
 
-
+use crate::{
+    api::v1::{
+        dds_recv::DdsConnection,
+        lrgs::{LrgsCluster, LrgsClusterStatus},
+    },
+    lrgs::{
+        config::{create_lrgs_config, create_managed_users},
+        configmap::created_script_config_map,
+        service::create_service,
+        statefulset::create_statefulset,
+    },
+    telemetry::{
+        state::{Context, State},
+        telemetry,
+    },
+};
 use anyhow::anyhow;
 use chrono::Utc;
 use futures::StreamExt;
@@ -12,15 +27,6 @@ use kube::{
     api::{Patch, PatchParams},
     runtime::{controller::Action, reflector::ObjectRef, watcher, Controller},
     Api, Client, Error, Resource, ResourceExt,
-};
-use crate::{
-    api::v1::{
-        dds_recv::DdsConnection,
-        lrgs::{LrgsCluster, LrgsClusterStatus},
-    }, lrgs::{config::{create_lrgs_config, create_managed_users}, configmap::created_script_config_map, service::create_service, statefulset::create_statefulset}, telemetry::{
-        state::{Context, State},
-        telemetry,
-    }
 };
 use serde_json::json;
 use tracing::{error, field, info, instrument, warn, Span};

@@ -52,12 +52,11 @@ pub enum MigrationState {
     Failed,
 }
 
-
 impl Condition<OpenDcsDatabase> for OpenDcsDatabase {
     fn matches_object(&self, obj: Option<&OpenDcsDatabase>) -> bool {
         match obj {
             Some(other) => self.metadata.name == other.metadata.name,
-            _ => false
+            _ => false,
         }
     }
 }

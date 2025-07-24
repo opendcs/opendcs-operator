@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 
+use crate::api::v1::lrgs::LrgsCluster;
 use k8s_openapi::{
     api::core::v1::{Service, ServicePort, ServiceSpec},
     apimachinery::pkg::{apis::meta::v1::OwnerReference, util::intstr::IntOrString},
 };
 use kube::{api::ObjectMeta, runtime::reflector::Lookup, Client};
-use crate::api::v1::lrgs::LrgsCluster;
 
 pub fn create_service(
     _client: Client,

@@ -7,7 +7,6 @@ lazy_static! {
     pub static ref TSDB_GROUP: String = "tsdb.opendcs.org".to_string();
 }
 
-
 impl Display for TSDB_GROUP {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.as_str())
