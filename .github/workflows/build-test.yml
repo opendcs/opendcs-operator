@@ -24,7 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [linux/amd64, linux/arm64/v8]
+        # additional targets disabled until we can figure out how 
+        # to get the build speed reasonable.
+        arch: [linux/amd64] #, linux/arm64/v8]
     steps:
       - name: Clean up disk space, so we don't run out.
         run: |
