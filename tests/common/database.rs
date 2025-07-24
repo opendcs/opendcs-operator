@@ -114,7 +114,7 @@ pub mod tests {
         service_api.create(&pp, &pg_service).await?;
 
         let establish = await_condition(deployment_api, "postgres", conditions::is_deployment_completed());
-        let _ = tokio::time::timeout(std::time::Duration::from_secs(60), establish).await.expect("postgres could not start in time");
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(120), establish).await.expect("postgres could not start in time");
 
         Ok(PostgresCredentials { secret_name: "test-secret".into() })
     }
