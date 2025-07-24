@@ -1,23 +1,38 @@
-
-use crate::api::{constants::LRGS_GROUP, v1::{dds_recv::{DdsConnection, TlsMode}, drgs::DrgsConnection, lrgs::{self, LrgsCluster}}};
-//use hickory_resolver::TokioAsyncResolver as Resolver;
-use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString};
-//use futures::{StreamExt, TryStreamExt};
+use crate::api::{
+    constants::LRGS_GROUP,
+    v1::{
+        dds_recv::{DdsConnection, TlsMode},
+        drgs::DrgsConnection,
+        lrgs::LrgsCluster,
+    },
+};
+use k8s_openapi::{
+    api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString,
+};
 use kube::{
-    api::{Api, ListParams, ObjectMeta}, Client
+    api::{Api, ListParams, ObjectMeta},
+    Client,
 };
 use passwords::PasswordGenerator;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use simple_xml_builder::XMLElement;
-use tracing::{debug, warn};
-//, PostParams}};
+use tracing::debug;
 
-use std::{collections::BTreeMap, fmt::format, vec};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
+use std::{collections::BTreeMap, vec};
 
 use super::password_file;
 
-fn add_dds_connection(conf: &mut XMLElement, i: i32, name: &str, hostname: &str, port: i32, username: &str, enabled: bool, tls_mode: TlsMode) {
+fn add_dds_connection(
+    conf: &mut XMLElement,
+    i: i32,
+    name: &str,
+    hostname: &str,
+    port: i32,
+    username: &str,
+    enabled: bool,
+    tls_mode: TlsMode,
+) {
     let mut connection = XMLElement::new("connection");
     connection.add_attribute("number", i);
     connection.add_attribute("host", hostname);
@@ -50,8 +65,6 @@ fn add_dds_connection(conf: &mut XMLElement, i: i32, name: &str, hostname: &str,
     connection.add_child(authenticate);
     connection.add_child(tls);
 
-    
-
     conf.add_child(connection);
 }
 
@@ -65,9 +78,16 @@ async fn create_ddsrecv_conf(client: Client, namespace: &str) -> Result<String> 
     // to make sure this would always just be empty and figure out some other error conditions.
     for host in connections.list(&ListParams::default()).await? {
         println!("found dds {}", host.spec.hostname);
-        add_dds_connection(&mut ddsrecv_conf, i, &host.metadata.name.unwrap(), &host.spec.hostname,
-                           host.spec.port, &host.spec.username, host.spec.enabled.unwrap_or(false),
-                           host.spec.tls_mode.unwrap_or(TlsMode::NoTls));
+        add_dds_connection(
+            &mut ddsrecv_conf,
+            i,
+            &host.metadata.name.unwrap(),
+            &host.spec.hostname,
+            host.spec.port,
+            &host.spec.username,
+            host.spec.enabled.unwrap_or(false),
+            host.spec.tls_mode.unwrap_or(TlsMode::NoTls),
+        );
         i = i + 1;
     }
     Ok(ddsrecv_conf.to_string())
@@ -108,8 +128,8 @@ async fn create_drgsrecv_conf(client: Client, namespace: &str) -> Result<String>
         xml_connection.add_child(xml_event_port_enabled);
         xml_connection.add_child(xml_start_pattern);
         drgsrecv_conf.add_child(xml_connection);
-        
-        i = i +1;
+
+        i = i + 1;
     }
     Ok(drgsrecv_conf.to_string())
 }
@@ -144,12 +164,20 @@ async fn create_password_file(client: Client, namespace: &str) -> Result<String>
 
 pub struct LrgsConfig {
     pub secret: Secret,
-    pub hash: String
+    pub hash: String,
 }
 
-pub async fn create_lrgs_config(client: Client, cluster: &LrgsCluster, owner_ref: &OwnerReference) -> Result<LrgsConfig> {
+pub async fn create_lrgs_config(
+    client: Client,
+    cluster: &LrgsCluster,
+    owner_ref: &OwnerReference,
+) -> Result<LrgsConfig> {
     let mut hasher = Sha256::new();
-    let namespace = cluster.metadata.namespace.clone().expect("LrgsCluster does not have a namespace set.");
+    let namespace = cluster
+        .metadata
+        .namespace
+        .clone()
+        .expect("LrgsCluster does not have a namespace set.");
 
     let password_file = create_password_file(client.clone(), &namespace).await?;
     hasher.update(password_file.as_bytes());
@@ -162,7 +190,9 @@ pub async fn create_lrgs_config(client: Client, cluster: &LrgsCluster, owner_ref
 
     let num_day_files = cluster.spec.archive_length_days.unwrap_or(31);
 
-    let config_file_data = Vec::from(format!("
+    let config_file_data = Vec::from(
+        format!(
+            "
 archiveDir: /archive
 enableDdsRecv: true
 ddsRecvConfig: /tmp/ddsrecv.conf
@@ -174,52 +204,49 @@ ddsListenPort: 16003
 ddsRequireAuth: true
 # this prevents the LRGS from failing to respond if no data is available
 noTimeout: true
-    ").to_string());
+    "
+        )
+        .to_string(),
+    );
 
     let password_file_data = Vec::from(password_file);
     let dds_config_data = Vec::from(dds_config);
     let drgs_config_data = Vec::from(drgs_config);
 
     let secret = Secret {
-        data: Some(
-            BTreeMap::from([
-                (".lrgs.passwd".to_string(), ByteString(password_file_data)),
-                ("ddsrecv.conf".to_string(), ByteString(dds_config_data)),
-                ("drgsconf.xml".to_string(), ByteString(drgs_config_data)),
-                ("lrgs.conf".to_string(), ByteString(config_file_data))
-            ])
-        ),
+        data: Some(BTreeMap::from([
+            (".lrgs.passwd".to_string(), ByteString(password_file_data)),
+            ("ddsrecv.conf".to_string(), ByteString(dds_config_data)),
+            ("drgsconf.xml".to_string(), ByteString(drgs_config_data)),
+            ("lrgs.conf".to_string(), ByteString(config_file_data)),
+        ])),
         metadata: ObjectMeta {
-            name: Some(format!("{}-lrgs-configuration",&owner_ref.name)),
+            name: Some(format!("{}-lrgs-configuration", &owner_ref.name)),
             namespace: Some(namespace.clone()),
             owner_references: Some(vec![owner_ref.clone()]),
-            annotations: Some(
-                BTreeMap::from(
-                    [
-                        (format!("{}/for-cluster",LRGS_GROUP.as_str()).clone(),cluster.metadata.name.clone().unwrap())
-                    ]
-                )
-            ),
+            annotations: Some(BTreeMap::from([(
+                format!("{}/for-cluster", LRGS_GROUP.as_str()).clone(),
+                cluster.metadata.name.clone().unwrap(),
+            )])),
             ..Default::default()
-            
         },
         ..Default::default()
     };
 
     let hash = base16ct::lower::encode_string(&hasher.finalize());
     debug!("Calculated hash is: {hash}");
-    return Ok(LrgsConfig {
-        secret,
-        hash
-    })
+    return Ok(LrgsConfig { secret, hash });
 }
 
-
-pub async fn create_managed_users(client: Client, lrgs_cluster: &LrgsCluster, owner_ref: &OwnerReference) -> Result<Vec<Secret>> {
+pub async fn create_managed_users(
+    client: Client,
+    lrgs_cluster: &LrgsCluster,
+    owner_ref: &OwnerReference,
+) -> Result<Vec<Secret>> {
     let ns = lrgs_cluster.metadata.namespace.clone().unwrap();
     let cluster_name = lrgs_cluster.metadata.name.clone().unwrap();
     let secrets_api: Api<Secret> = Api::namespaced(client, &ns);
-    let required = Vec::from(["lrgsadmin","replication","routing-user"]);
+    let required = Vec::from(["lrgsadmin", "replication", "routing-user"]);
     let mut managed_users = Vec::new();
     for user in required {
         match secrets_api.get_opt(user).await? {
@@ -233,46 +260,38 @@ pub async fn create_managed_users(client: Client, lrgs_cluster: &LrgsCluster, ow
                     symbols: false,
                     spaces: false,
                     exclude_similar_characters: false,
-                    strict: true
-                }.generate_one().unwrap();
+                    strict: true,
+                }
+                .generate_one()
+                .unwrap();
                 let roles = match user {
                     "lrgsadmin" => "dds,lrgsadmin",
                     "replication" => "dds",
                     "routing-user" => "dds",
-                    &_ => ""
+                    &_ => "",
                 };
-                managed_users.push(
-                    Secret {
-                        data: Some(
-                            BTreeMap::from([
-                                ("username".to_string(), ByteString(Vec::from(user))),
-                                ("password".to_string(), ByteString(Vec::from(password))),
-                                ("roles".to_string(), ByteString(Vec::from(roles)))
-                            ])
-                        ),
-                        type_: Some("lrgs.opendcs.org/ddsuser".to_string()),
-                        metadata: ObjectMeta {
-                            name: Some(user.to_string()),
-                            namespace: lrgs_cluster.metadata.namespace.clone(),
-                            owner_references: Some(vec![owner_ref.clone()]),
-                            annotations: Some(
-                                BTreeMap::from(
-                                    [
-                                        (format!("{}/for-cluster",LRGS_GROUP.as_str()).clone(), cluster_name.clone())
-                                    ]
-                                )
-                            ),
-                            ..Default::default()
-                            
-                        },
+                managed_users.push(Secret {
+                    data: Some(BTreeMap::from([
+                        ("username".to_string(), ByteString(Vec::from(user))),
+                        ("password".to_string(), ByteString(Vec::from(password))),
+                        ("roles".to_string(), ByteString(Vec::from(roles))),
+                    ])),
+                    type_: Some("lrgs.opendcs.org/ddsuser".to_string()),
+                    metadata: ObjectMeta {
+                        name: Some(user.to_string()),
+                        namespace: lrgs_cluster.metadata.namespace.clone(),
+                        owner_references: Some(vec![owner_ref.clone()]),
+                        annotations: Some(BTreeMap::from([(
+                            format!("{}/for-cluster", LRGS_GROUP.as_str()).clone(),
+                            cluster_name.clone(),
+                        )])),
                         ..Default::default()
-                    }                
-                );
-            },
+                    },
+                    ..Default::default()
+                });
+            }
         };
     }
 
-    
-    
     Ok(managed_users)
 }
