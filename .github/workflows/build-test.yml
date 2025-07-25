@@ -34,10 +34,10 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
       - uses: actions/checkout@v4.2.2
-      - uses: /.github/actions/docker-ops
+      - uses: ./.github/actions/docker-ops
         with:
           exec: lrgs
-      - uses: /.github/actions/docker-ops
+      - uses: ./.github/actions/docker-ops
         with:
           exec: schema
       
