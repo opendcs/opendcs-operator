@@ -22,7 +22,7 @@ runs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/opendcs/k8s/${{inputs.exex}}-controller
+        images: ghcr.io/opendcs/k8s/${{inputs.exec}}-controller
         tags: |
           type=sha,format=long
           type=ref,event=tag
