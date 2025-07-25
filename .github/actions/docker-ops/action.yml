@@ -7,8 +7,9 @@ inputs:
   push:
     type: boolean
     required: true
+    description: whether or
     default: false
-outputs:
+outputs: {}
   
 runs:
   using: "composite"
