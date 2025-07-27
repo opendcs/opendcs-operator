@@ -59,32 +59,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.token != null && secrets.token || secrets.GITHUB_TOKEN }}
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
+      - uses: ./.github/actions/docker-ops
         with:
-          images: ghcr.io/opendcs/k8s/lrgs-controller
-          tags: |
-            type=sha,format=long
-            type=ref,event=tag
-      - uses: docker/build-push-action@v6
-        id: build-and-push
-        with:
-          platforms: ${{ matrix.arch }}
+          exec: lrgs
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-      - name: Sign the container image
-        env:
-          DIGEST: ${{ steps.build-and-push.outputs.digest }}
-          TAGS: ${{ steps.meta.outputs.tags }}
-        run: |
-          images=""
-          for tag in ${TAGS}; do
-            images+="${tag}@${DIGEST} "
-          done
-          cosign sign --yes ${images}
+      - uses: ./.github/actions/docker-ops
+        with:
+          exec: schema
+          push: true

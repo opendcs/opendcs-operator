@@ -8,8 +8,14 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/src/app/target \
     cargo install --target `uname -m`-unknown-linux-musl --path .
 
-FROM scratch
+FROM scratch AS lrgs
 
 USER 1000:1000
 COPY --from=builder /usr/local/cargo/bin/lrgs ./
 CMD [ "/lrgs" ]
+
+FROM scratch AS schema
+
+USER 1000:1000
+COPY --from=builder /usr/local/cargo/bin/schema ./
+CMD [ "/schema" ]
