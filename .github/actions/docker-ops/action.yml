@@ -33,3 +33,15 @@ runs:
         push: ${{ inputs.push }}
         tags: ${{ steps.meta.outputs.tags }}
         target: ${{inputs.exec}}
+    - name: Sign the container image
+      shell: bash
+      if: inputs.push == true
+      env:
+        DIGEST: ${{ steps.build-and-push.outputs.digest }}
+        TAGS: ${{ steps.meta.outputs.tags }}
+      run: |
+        images=""
+        for tag in ${TAGS}; do
+          images+="${tag}@${DIGEST} "
+        done
+        cosign sign --yes ${images}
