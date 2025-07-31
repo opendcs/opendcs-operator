@@ -28,7 +28,7 @@ telemetry = ["opentelemetry-otlp"]
 [dependencies]
 kube = { version = "1.0.0", features = ["runtime", "derive","admission"] }
 k8s-openapi = { version = "0.25.0", features = ["v1_30"] }
-tokio = { version = "1.46.1", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.47.0", features = ["macros", "rt-multi-thread"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.141"
 serde_yaml = "0.9.25"
@@ -57,6 +57,6 @@ env_logger = "0.11.8"
 prometheus-client = "0.23.1"
 testcontainers-modules = { version = "0.12.1", features = ["blocking","k3s"] }
 rustls = "0.23.31"
-rstest = "0.25.0"
+rstest = "0.26.1"
 async-std = { version = "1.13", features = ["attributes"] }
 ctor = "0.4.3"
