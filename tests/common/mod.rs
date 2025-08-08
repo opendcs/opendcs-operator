@@ -2,13 +2,12 @@ pub mod database;
 #[cfg(test)]
 pub mod tests {
 
-    // Note this useful idiom: importing names from outer (for mod tests) scope.
-
     use ctor::{ctor, dtor};
 
+    use tracing::{debug, warn};
     use tracing_subscriber::{prelude::*, EnvFilter, Registry};
 
-    use std::process::Command;
+    use std::{env, process::Command};
 
     use kube::{
         config::{KubeConfigOptions, Kubeconfig},
@@ -28,7 +27,7 @@ pub mod tests {
                 .args(["-c", "kind create cluster --name odcs-test"])
                 .output()
                 .expect("Failed to start kind");
-            println!("{result:?}");
+            debug!("{result:?}");
             let kconfig = Kubeconfig::read().expect("unable to read any kubernetes config files");
             let opts = KubeConfigOptions {
                 // kind prefixes everything with kind-
@@ -47,18 +46,11 @@ pub mod tests {
         }
     }
 
-    impl Drop for K8s {
-        fn drop(&mut self) {
-            println!("Stopping kind");
-        }
-    }
-
     static K8S_INST: OnceCell<K8s> = OnceCell::const_new();
 
     #[fixture]
     //#[once]
     pub async fn k8s_info() -> &'static K8s {
-        println!("hello!");
         K8S_INST.get_or_init(|| async { K8s::new().await }).await
     }
 
@@ -88,10 +80,15 @@ pub mod tests {
 
     #[dtor]
     fn on_shutdown() {
-        let result = Command::new("sh")
-            .args(["-c", "kind delete cluster --name odcs-test"])
-            .output()
-            .expect("Failed to start kind");
-        println!("{result:?}");
+        let keep = env::var("KEEP_KIND").is_ok_and(|s| s == "true" );
+        if !keep {
+            let result = Command::new("sh")
+                .args(["-c", "kind delete cluster --name odcs-test"])
+                .output()
+                .expect("Failed to start kind");
+            debug!("{result:?}");
+        } else {
+            warn!("Kind cluster was not removed, you may need to perform manual cleanup before next run.");
+        }
     }
 }
