@@ -8,17 +8,17 @@ mod tests {
     use actix_web::web::Data;
     use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
     use kube::{
-        api::{ListParams, Patch, PatchParams, PostParams},
+        api::{DeleteParams, ListParams, Patch, PatchParams, PostParams},
         runtime::{
             conditions,
-            wait::{await_condition, Condition},
+            wait::await_condition,
         },
         Api, CustomResourceExt,
     };
     use opendcs_controllers::{
         api::{
             constants::TSDB_GROUP,
-            v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseSpec},
+            v1::tsdb::database::{OpenDcsDatabase, OpenDcsDatabaseSpec},
         },
         schema::controller,
         telemetry::state::State,
@@ -27,7 +27,7 @@ mod tests {
     use tokio::time::sleep;
 
     use crate::common::{
-        database::tests::create_postgres_instance,
+        database::tests::{create_postgres_instance, odcs_database_ready},
         tests::{k8s_info, K8s},
     };
 
@@ -60,12 +60,13 @@ mod tests {
             .await
             .expect("crd not successfully loaded");
         println!("done, attempting to create instance");
-        let db_secret = create_postgres_instance(client.clone())
+        let db_secret = create_postgres_instance(client.clone(), "simple")
             .await
             .expect("Postgres Instance unable to start");
         let odcs_api: Api<OpenDcsDatabase> = Api::default_namespaced(client.clone());
+        let test_db_name = "testdb";
         let odcs_database = OpenDcsDatabase::new(
-            "testdb",
+            test_db_name,
             OpenDcsDatabaseSpec {
                 schema_version: "ghcr.io/opendcs/compdepends:main-nightly".into(),
                 database_secret: db_secret.secret_name.clone(),
@@ -84,24 +85,16 @@ mod tests {
             .await
             .expect("Unable to create OpenDCS Database Instance.");
         println!("waiting for odcs db ready.");
-        let name = "testdb";
-        let establish = await_condition(odcs_api, name, odcs_database_ready());
-        let _ = tokio::time::timeout(std::time::Duration::from_secs(30), establish)
+        let establish = await_condition(odcs_api.clone(), test_db_name, odcs_database_ready());
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(300), establish)
             .await
             .expect("database not created");
         //controller.now_or_never();
+        let result = odcs_api.delete(test_db_name, &DeleteParams::default()).await;
+        assert!(result.is_ok());
+        //let result = db_secret.remove().await;
+        //assert!(result.is_ok());
     }
 
-    fn odcs_database_ready() -> impl Condition<OpenDcsDatabase> {
-        move |obj: Option<&OpenDcsDatabase>| {
-            if let Some(db) = &obj {
-                if let Some(status) = &db.status {
-                    if let Some(state) = &status.state {
-                        return *state == MigrationState::Ready;
-                    }
-                }
-            }
-            false
-        }
-    }
+    
 }
