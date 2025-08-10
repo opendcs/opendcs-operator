@@ -1,10 +1,12 @@
 #[cfg(test)]
 pub mod test {
-    use std::collections::BTreeMap;
-    use anyhow::Result;
-    use futures::future::Either;
-    use kube::{api::{DeleteParams, ListParams, PostParams}, core::Status, runtime::wait::await_condition, Api, Client};
+    use kube::{
+        api::{DeleteParams, ListParams, PostParams},
+        runtime::wait::await_condition,
+        Api, Client,
+    };
     use opendcs_controllers::api::v1::tsdb::database::{OpenDcsDatabase, OpenDcsDatabaseSpec};
+    use std::collections::BTreeMap;
     use tracing::info;
 
     use crate::common::database::tests::{odcs_database_ready, PostgresInstance};
@@ -12,12 +14,16 @@ pub mod test {
     pub struct OpenDcsTestDatabase {
         client: Client,
         name: String,
-        opendcs_database: OpenDcsDatabase
-
+        _opendcs_database: OpenDcsDatabase,
     }
 
     impl OpenDcsTestDatabase {
-        pub async fn new(client: Client, name: &str, db: &PostgresInstance, migration_image: &str) -> Self {
+        pub async fn new(
+            client: Client,
+            name: &str,
+            db: &PostgresInstance,
+            migration_image: &str,
+        ) -> Self {
             let pp = PostParams::default();
             let odcs_api: Api<OpenDcsDatabase> = Api::default_namespaced(client.clone());
             let test_db_name = name;
@@ -46,7 +52,9 @@ pub mod test {
                 .await
                 .expect("database not created");
             Self {
-                        client: client.clone(), name: name.to_string(), opendcs_database
+                client: client.clone(),
+                name: name.to_string(),
+                _opendcs_database: opendcs_database,
             }
         }
 
@@ -57,7 +65,4 @@ pub mod test {
         }
     }
 
-    pub async fn create_opendcs_db(client: Client, name: &str, ) {
-        
-    }
 }

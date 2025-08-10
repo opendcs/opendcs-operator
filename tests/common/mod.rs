@@ -17,7 +17,6 @@ pub mod tests {
 
     use std::{
         env,
-        future::Future,
         process::Command,
         thread::{self, JoinHandle},
     };
