@@ -1,4 +1,5 @@
 pub mod database;
+pub mod opendcs_database;
 #[cfg(test)]
 pub mod tests {
     use actix_web::web::Data;
