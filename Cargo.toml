@@ -59,4 +59,4 @@ testcontainers-modules = { version = "0.12.1", features = ["blocking","k3s"] }
 rustls = "0.23.31"
 rstest = "0.26.1"
 async-std = { version = "1.13", features = ["attributes"] }
-ctor = "0.4.3"
+ctor = "0.5.0"
