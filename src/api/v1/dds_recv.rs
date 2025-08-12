@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use garde::Validate;
 use kube::CustomResource;
-use schemars::{schema::SchemaObject, JsonSchema};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 // Our custom resource
