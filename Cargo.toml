@@ -54,9 +54,9 @@ opentelemetry = { version = "0.30.0", features = ["trace"] }
 opentelemetry-otlp = { version = "0.30.0", optional = true }
 opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio"] }
 env_logger = "0.11.8"
-prometheus-client = "0.23.1"
+prometheus-client = "0.24.0"
 testcontainers-modules = { version = "0.12.1", features = ["blocking","k3s"] }
 rustls = "0.23.31"
 rstest = "0.26.1"
 async-std = { version = "1.13", features = ["attributes"] }
-ctor = "0.4.3"
+ctor = "0.5.0"
