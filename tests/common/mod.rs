@@ -10,7 +10,6 @@ pub mod tests {
 
     use std::process::Command;
 
-    
     use kube::{
         config::{KubeConfigOptions, Kubeconfig},
         Client, Config,
