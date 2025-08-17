@@ -64,5 +64,4 @@ pub mod test {
             return result.is_ok();
         }
     }
-
 }
