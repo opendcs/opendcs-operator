@@ -5,8 +5,8 @@ use prometheus_client::{
     metrics::{counter::Counter, exemplar::HistogramWithExemplars, family::Family},
     registry::{Registry, Unit},
 };
-use std::{marker::PhantomData, time::SystemTime};
 use std::sync::Arc;
+use std::{marker::PhantomData, time::SystemTime};
 use tokio::time::Instant;
 
 #[derive(Clone)]
@@ -133,6 +133,7 @@ impl Drop for ReconcileMeasurer {
         #[allow(clippy::cast_precision_loss)]
         let duration = self.start.elapsed().as_millis() as f64 / 1000.0;
         let labels = self.labels.take();
-        self.metric.observe(duration, labels, Some(SystemTime::now()));
+        self.metric
+            .observe(duration, labels, Some(SystemTime::now()));
     }
 }

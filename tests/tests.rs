@@ -39,16 +39,17 @@ mod tests {
         let k8s_inst = k8s_inst.await;
         let client = k8s_inst.get_client();
 
-        let db = k8s_inst.create_database("simple").await;
+        let db = k8s_inst.create_database("upgrade").await;
 
         let odcs_db = OpenDcsTestDatabase::new(
             client.clone(),
-            "testdb",
+            "testdb-upgrade",
             &db,
             "ghcr.io/opendcs/compdepends:main-nightly",
         )
         .await;
 
+        // start a depending application
         // Change the schema image to trigger migration and wait.
 
         assert!(odcs_db.delete().await);
