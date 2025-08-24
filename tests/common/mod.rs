@@ -117,7 +117,7 @@ pub mod tests {
         pub async fn create_database(&self, name: &str) -> PostgresInstance {
             create_postgres_instance(self.client.clone(), name)
                 .await
-                .expect("Unable to create posgres instance.")
+                .expect("Unable to create postgres instance.")
         }
     }
 
