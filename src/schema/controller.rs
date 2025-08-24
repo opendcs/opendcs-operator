@@ -15,17 +15,17 @@ use anyhow::anyhow;
 use chrono::Utc;
 use futures::StreamExt;
 use k8s_openapi::{
-    api::{batch::v1::Job, core::v1::Secret},
     ByteString,
+    api::{batch::v1::Job, core::v1::Secret},
 };
 use kube::{
-    api::{ObjectMeta, Patch, PatchParams},
-    runtime::{controller::Action, watcher, Controller},
     Api, Client, Error, Resource, ResourceExt,
+    api::{ObjectMeta, Patch, PatchParams},
+    runtime::{Controller, controller::Action, watcher},
 };
 use passwords::PasswordGenerator;
 use serde_json::json;
-use tracing::{field, info, instrument, warn, Span};
+use tracing::{Span, field, info, instrument, warn};
 
 pub async fn run(state: State<OpenDcsDatabase>, client: Client) {
     let databases: Api<OpenDcsDatabase> = Api::all(client.clone());

@@ -9,7 +9,7 @@ mod tests {
 
     use crate::common::{
         opendcs_database::test::OpenDcsTestDatabase,
-        tests::{k8s_inst, K8s},
+        tests::{K8s, k8s_inst},
     };
 
     #[rstest]
@@ -53,7 +53,8 @@ mod tests {
         // start a depending application
         // Change the schema image to trigger migration and wait.
         let odcs_db =
-            OpenDcsTestDatabase::new(client.clone(), "testdb-upgrade", &db, upgrade_image).await;
+            OpenDcsTestDatabase::upgrade(client.clone(), "testdb-upgrade", &db, upgrade_image)
+                .await;
 
         let status = odcs_db.opendcs_database.status.clone().expect("No status?");
         assert!(status.state == Some(MigrationState::Ready));

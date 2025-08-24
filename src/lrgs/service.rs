@@ -5,7 +5,7 @@ use k8s_openapi::{
     api::core::v1::{Service, ServicePort, ServiceSpec},
     apimachinery::pkg::{apis::meta::v1::OwnerReference, util::intstr::IntOrString},
 };
-use kube::{api::ObjectMeta, runtime::reflector::Lookup, Client};
+use kube::{Client, api::ObjectMeta, runtime::reflector::Lookup};
 
 pub fn create_service(
     _client: Client,

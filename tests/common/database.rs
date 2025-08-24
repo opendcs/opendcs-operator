@@ -14,12 +14,12 @@ pub mod tests {
         apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::LabelSelector},
     };
     use kube::{
+        Api, Client, ResourceExt,
         api::{DeleteParams, ListParams, ObjectMeta, PostParams},
         runtime::{
             conditions,
-            wait::{await_condition, Condition},
+            wait::{Condition, await_condition},
         },
-        Api, Client, ResourceExt,
     };
     use opendcs_controllers::api::v1::tsdb::database::{MigrationState, OpenDcsDatabase};
     use tracing::debug;
@@ -210,11 +210,16 @@ pub mod tests {
 
     /// await an OpenDcsDatabase instance to be ready (MigrationState::Ready)
     pub fn odcs_database_ready() -> impl Condition<OpenDcsDatabase> {
+        odcs_database_state(MigrationState::Ready)
+    }
+
+    /// await an OpenDcsDatabase instance to at a state
+    pub fn odcs_database_state(expected_state: MigrationState) -> impl Condition<OpenDcsDatabase> {
         move |obj: Option<&OpenDcsDatabase>| {
             if let Some(db) = &obj {
                 if let Some(status) = &db.status {
                     if let Some(state) = &status.state {
-                        return *state == MigrationState::Ready;
+                        return *state == expected_state;
                     }
                 }
             }

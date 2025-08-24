@@ -13,7 +13,7 @@ use k8s_openapi::{
         apis::meta::v1::{LabelSelector, OwnerReference},
     },
 };
-use kube::{api::ObjectMeta, Resource, ResourceExt};
+use kube::{Resource, ResourceExt, api::ObjectMeta};
 
 use std::collections::BTreeMap;
 

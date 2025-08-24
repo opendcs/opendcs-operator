@@ -24,12 +24,12 @@ use k8s_openapi::api::{
     core::v1::{ConfigMap, Secret, Service},
 };
 use kube::{
-    api::{Patch, PatchParams},
-    runtime::{controller::Action, reflector::ObjectRef, watcher, Controller},
     Api, Client, Error, Resource, ResourceExt,
+    api::{Patch, PatchParams},
+    runtime::{Controller, controller::Action, reflector::ObjectRef, watcher},
 };
 use serde_json::json;
-use tracing::{error, field, info, instrument, warn, Span};
+use tracing::{Span, error, field, info, instrument, warn};
 
 pub async fn run(state: State<LrgsCluster>) {
     let client = Client::try_default()

@@ -13,7 +13,7 @@ pub mod tests {
         telemetry::state::State,
     };
     use tracing::{debug, warn};
-    use tracing_subscriber::{prelude::*, EnvFilter, Registry};
+    use tracing_subscriber::{EnvFilter, Registry, prelude::*};
 
     use std::{
         env,
@@ -22,16 +22,16 @@ pub mod tests {
     };
 
     use kube::{
+        Api, Client, Config, CustomResourceExt,
         api::{Patch, PatchParams},
         config::{KubeConfigOptions, Kubeconfig},
         runtime::{conditions, wait::await_condition},
-        Api, Client, Config, CustomResourceExt,
     };
     use rstest::fixture;
     use rustls::crypto::CryptoProvider;
     use tokio::sync::OnceCell;
 
-    use crate::common::database::tests::{create_postgres_instance, PostgresInstance};
+    use crate::common::database::tests::{PostgresInstance, create_postgres_instance};
 
     pub struct K8s {
         client: Client,
@@ -163,7 +163,9 @@ pub mod tests {
                 .expect("Failed to start kind");
             debug!("{result:?}");
         } else {
-            warn!("Kind cluster was not removed, you may need to perform manual cleanup before next run.");
+            warn!(
+                "Kind cluster was not removed, you may need to perform manual cleanup before next run."
+            );
         }
     }
 }

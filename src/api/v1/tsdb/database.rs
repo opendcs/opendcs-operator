@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, fmt::Debug};
 
 use chrono::{DateTime, Utc};
 use garde::Validate;
-use kube::{runtime::wait::Condition, CustomResource, KubeSchema};
+use kube::{CustomResource, KubeSchema, runtime::wait::Condition};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

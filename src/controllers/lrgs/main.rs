@@ -1,5 +1,5 @@
 use actix_web::{
-    get, middleware, web::Data, App, HttpRequest, HttpResponse, HttpServer, Responder,
+    App, HttpRequest, HttpResponse, HttpServer, Responder, get, middleware, web::Data,
 };
 use opendcs_controllers::api::v1::lrgs::LrgsCluster;
 use opendcs_controllers::lrgs::controller;

@@ -1,5 +1,5 @@
 use actix_web::{
-    get, middleware, web::Data, App, HttpRequest, HttpResponse, HttpServer, Responder,
+    App, HttpRequest, HttpResponse, HttpServer, Responder, get, middleware, web::Data,
 };
 use kube::Client;
 use opendcs_controllers::api::v1::tsdb::database::OpenDcsDatabase;

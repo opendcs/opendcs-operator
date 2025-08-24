@@ -21,8 +21,8 @@ use k8s_openapi::{
     apimachinery::pkg::apis::meta::v1::OwnerReference,
 };
 use kube::{
-    api::{ListParams, ObjectMeta, Patch, PatchParams},
     Api, Client, Resource, ResourceExt,
+    api::{ListParams, ObjectMeta, Patch, PatchParams},
 };
 use tracing::info;
 
