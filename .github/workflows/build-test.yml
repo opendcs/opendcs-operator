@@ -18,7 +18,10 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
       - uses: actions/checkout@v5.0.0
-      - run: kind create cluster --name odcs-test
+      - uses: engineerd/setup-kind@v0.6.2
+        with:
+          version: "v0.26.0"
+          name: odcs-test
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           export RUST_BACKTRACE=full
