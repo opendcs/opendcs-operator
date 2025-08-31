@@ -22,6 +22,10 @@ jobs:
         with:
           version: "v0.26.0"
           name: odcs-test
+      - name: Enable ipv4 and ipv6 forwarding
+        run: |
+          sudo sysctl -w net.ipv6.conf.all.forwarding=1
+          sudo sysctl -w net.ipv4.ip_forward=1
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
           export RUST_BACKTRACE=full
