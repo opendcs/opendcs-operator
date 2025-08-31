@@ -27,6 +27,13 @@ jobs:
           export RUST_BACKTRACE=full
           export KEEP_KIND=true
           cargo test -- --nocapture
+      - run: |
+          kind export logs --name odcs-test kind_logs
+      - uses: actions/upload-artifact@v4.6.2        
+        with:
+          name: kind-logs
+          path: |
+            kind_logs
   docker-images:
     runs-on: ubuntu-latest
     strategy:
