@@ -33,7 +33,7 @@ serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.143"
 serde_yaml = "0.9.25"
 schemars = { version = "0.8.22", features = ["chrono"] }
-chrono = { version = "0.4.41", features = ["serde"] }
+chrono = { version = "0.4.42", features = ["serde"] }
 futures = "0.3.31"
 garde = { version = "0.22.0", default-features = false, features = ["derive"] }
 simple-xml-builder = "1.1.0"
@@ -48,7 +48,7 @@ lazy_static = "1.4.0"
 passwords = "3.1.16"
 actix-web = "4.11.0"
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["json", "env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["json", "env-filter"] }
 tracing-opentelemetry = "0.31.0"
 opentelemetry = { version = "0.30.0", features = ["trace"] }
 opentelemetry-otlp = { version = "0.30.0", optional = true }
