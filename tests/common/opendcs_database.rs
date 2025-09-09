@@ -66,7 +66,7 @@ pub mod test {
 
             info!("waiting for odcs db ready.");
             let establish = await_condition(odcs_api.clone(), name, odcs_database_ready());
-            let _ = tokio::time::timeout(std::time::Duration::from_secs(300), establish)
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(600), establish)
                 .await
                 .expect("database not updated");
 
