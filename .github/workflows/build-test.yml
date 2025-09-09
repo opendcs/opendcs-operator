@@ -28,7 +28,6 @@ jobs:
           sudo sysctl -w net.ipv4.ip_forward=1
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - run: |
-          export RUST_BACKTRACE=full
           export KEEP_KIND=true
           cargo test -- --nocapture
       - name: Export Kind logs
