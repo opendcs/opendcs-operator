@@ -12,13 +12,13 @@ pub mod tests {
         schema::controller,
         telemetry::state::State,
     };
-    use tracing::{debug, warn};
+    use tracing::{debug, info, warn};
     use tracing_subscriber::{EnvFilter, Registry, prelude::*};
 
     use std::{
         env,
         process::Command,
-        thread::{self, JoinHandle},
+        thread::{self, JoinHandle}, time::Duration,
     };
 
     use kube::{
@@ -48,12 +48,14 @@ pub mod tests {
             let kconfig = Kubeconfig::read().expect("unable to read any kubernetes config files");
             let opts = KubeConfigOptions {
                 // kind prefixes everything with kind-
-                cluster: Some("kind-odcs-test".into()),
+                cluster: Some("kind-odcs-test".into()),                
                 ..Default::default()
             };
-            let config = Config::from_custom_kubeconfig(kconfig, &opts)
+            let mut config = Config::from_custom_kubeconfig(kconfig, &opts)
                 .await
                 .expect("Unable to create config.");
+            config.connect_timeout = Some(Duration::from_secs(300));
+            info!("{:?}", config);
             let client = Client::try_from(config).expect("Unable to create client");
             let schema_controller = K8s::start_schema_controller(client.clone());
             let inst = K8s {
