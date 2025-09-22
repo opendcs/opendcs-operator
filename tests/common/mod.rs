@@ -34,7 +34,7 @@ pub mod tests {
     use crate::common::database::tests::{PostgresInstance, create_postgres_instance};
 
     pub struct K8s {
-        client: Client,
+        config: Config,
         _schema_controller: JoinHandle<()>,
     }
 
@@ -59,7 +59,7 @@ pub mod tests {
             let client = Client::try_from(config).expect("Unable to create client");
             let schema_controller = K8s::start_schema_controller(client.clone());
             let inst = K8s {
-                client: client,
+                config: config,
                 _schema_controller: schema_controller,
             };
             inst.load_crds()
@@ -69,7 +69,7 @@ pub mod tests {
         }
 
         pub fn get_client(&self) -> Client {
-            self.client.clone()
+            Client::try_from(self.config.clone()).expect("Unable to create client")
         }
 
         fn start_schema_controller(client: Client) -> JoinHandle<()> {
@@ -85,7 +85,7 @@ pub mod tests {
         }
 
         async fn load_crds(&self) -> Result<()> {
-            let crd_api: Api<CustomResourceDefinition> = Api::all(self.client.clone());
+            let crd_api: Api<CustomResourceDefinition> = Api::all(self.get_client());
             let patch = PatchParams::apply("odcs db test").force();
 
             debug!("Loading CRDs");
@@ -117,7 +117,7 @@ pub mod tests {
         }
 
         pub async fn create_database(&self, name: &str) -> PostgresInstance {
-            create_postgres_instance(self.client.clone(), name)
+            create_postgres_instance(self.get_client(), name)
                 .await
                 .expect("Unable to create postgres instance.")
         }
