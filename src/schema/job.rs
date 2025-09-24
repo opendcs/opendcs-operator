@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     api::{
         constants::TSDB_GROUP,
@@ -6,6 +8,7 @@ use crate::{
     schema::configmap::create_script_config_map,
 };
 use anyhow::Result;
+use chrono::Utc;
 use k8s_openapi::{
     api::{
         batch::v1::{Job, JobSpec},
@@ -18,8 +21,8 @@ use k8s_openapi::{
     apimachinery::pkg::apis::meta::v1::OwnerReference,
 };
 use kube::{
-    api::{ListParams, ObjectMeta, Patch, PatchParams},
     Api, Client, Resource, ResourceExt,
+    api::{ListParams, ObjectMeta, Patch, PatchParams},
 };
 use tracing::info;
 
@@ -43,11 +46,23 @@ impl MigrationJob {
             &database.namespace().unwrap_or("default".to_string()),
         );
 
+        let search = ListParams::default().labels(&format!("migration-job={}", &job_name));
+        let job_list = jobs
+            .list(&search)
+            .await
+            .expect("unable to search jobs")
+            .items;
+
+        let job = match job_list.first() {
+            Some(j) => Some(j.clone()),
+            None => None,
+        };
+
         MigrationJob {
             client: client.clone(),
             database: database.clone(),
             owner_ref: database.controller_owner_ref(&()).unwrap(),
-            job: jobs.get_opt(&job_name).await.unwrap_or(None),
+            job: job,
             name: database.name_any().clone(),
             namespace: database.namespace().unwrap_or("default".to_string()),
             job_name: job_name.clone(),
@@ -113,19 +128,29 @@ impl MigrationJob {
             }),
             ..Default::default()
         });
+        let dt = Utc::now().format("%Y%m%d%Y%H%M%S");
+        let job_name = format!("{}-database-migration-{}", &self.name, &dt);
         let job = Job {
             metadata: ObjectMeta {
-                name: Some(self.job_name.clone()),
+                name: Some(job_name.clone()),
                 namespace: Some(self.namespace.clone()),
                 owner_references: Some(vec![self.owner_ref.clone()]),
+                labels: Some(BTreeMap::from([(
+                    "migration-job".into(),
+                    self.job_name.clone(),
+                )])),
                 ..Default::default()
             },
             spec: Some(JobSpec {
                 template: PodTemplateSpec {
                     metadata: Some(ObjectMeta {
-                        name: Some(self.job_name.clone()),
+                        name: Some(job_name.clone()),
                         namespace: Some(self.namespace.clone()),
                         owner_references: Some(vec![self.owner_ref.clone()]),
+                        labels: Some(BTreeMap::from([(
+                            "migration-job".into(),
+                            self.job_name.clone(),
+                        )])),
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {

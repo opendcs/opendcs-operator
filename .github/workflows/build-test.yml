@@ -18,8 +18,29 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
       - uses: actions/checkout@v5.0.0
+      - uses: engineerd/setup-kind@v0.6.2
+        with:
+          version: "v0.30.0"
+          name: odcs-test
+      - name: Enable ipv4 and ipv6 forwarding
+        run: |
+          sudo sysctl -w net.ipv6.conf.all.forwarding=1
+          sudo sysctl -w net.ipv4.ip_forward=1
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      - run: cargo test
+      - run: |
+          export KEEP_KIND=true
+          cargo test -- --nocapture
+      - name: Export Kind logs
+        if: success() || failure() # always run even if the previous step fails
+        run: |
+          kind export logs --name odcs-test kind_logs
+      - name: Upload Kind logs
+        uses: actions/upload-artifact@v4.6.2
+        if: success() || failure() # always run even if the previous step fails
+        with:
+          name: kind-logs
+          path: |
+            kind_logs
   docker-images:
     runs-on: ubuntu-latest
     strategy:

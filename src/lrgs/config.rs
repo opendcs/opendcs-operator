@@ -7,11 +7,11 @@ use crate::api::{
     },
 };
 use k8s_openapi::{
-    api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference, ByteString,
+    ByteString, api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference,
 };
 use kube::{
-    api::{Api, ListParams, ObjectMeta},
     Client,
+    api::{Api, ListParams, ObjectMeta},
 };
 use passwords::PasswordGenerator;
 use sha2::{Digest, Sha256};

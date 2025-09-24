@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use kube::{
-    runtime::events::{Recorder, Reporter},
     Client, ResourceExt,
+    runtime::events::{Recorder, Reporter},
 };
 use serde::Serialize;
 use std::sync::Arc;

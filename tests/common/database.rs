@@ -2,6 +2,7 @@
 pub mod tests {
     use std::collections::BTreeMap;
 
+    use anyhow::Result;
     use k8s_openapi::{
         api::{
             apps::v1::{Deployment, DeploymentSpec},
@@ -13,23 +14,83 @@ pub mod tests {
         apimachinery::pkg::{api::resource::Quantity, apis::meta::v1::LabelSelector},
     };
     use kube::{
-        api::{ObjectMeta, PostParams},
-        runtime::{conditions, wait::await_condition},
-        Api, Client,
+        Api, Client, ResourceExt,
+        api::{DeleteParams, ListParams, ObjectMeta, PostParams},
+        runtime::{
+            conditions,
+            wait::{Condition, await_condition},
+        },
     };
+    use opendcs_controllers::api::v1::tsdb::database::{MigrationState, OpenDcsDatabase};
+    use tracing::debug;
 
-    pub struct PostgresCredentials {
+    #[derive(Clone)]
+    pub struct PostgresInstance {
         pub secret_name: String,
+        app_name: String,
+        client: Client,
     }
 
-    pub async fn create_postgres_instance(client: Client) -> anyhow::Result<PostgresCredentials> {
+    impl PostgresInstance {
+        /// Close out instance, deletes all resources.
+        /// NOTE: will likely put in async drop if/when that is available. However, it does work
+        /// to be required to call this as we can then leave things running if there is a test failure.
+        pub async fn close(&self) -> Result<()> {
+            let app_name = self.app_name.clone();
+            let client = self.client.clone();
+            let deployment_api: Api<Deployment> = Api::default_namespaced(client.clone());
+            let secret_api: Api<Secret> = Api::default_namespaced(client.clone());
+            let service_api: Api<Service> = Api::default_namespaced(client.clone());
+            let list_params = ListParams::default().labels(&format!("app=={}", &app_name));
+            let delete_params = DeleteParams::default();
+
+            let deployments = deployment_api.list(&list_params).await?;
+            for inst in deployments {
+                let name = &inst.name_any();
+                debug!("Deleting Deployment {name}");
+                deployment_api.delete(name, &delete_params).await?;
+            }
+
+            let services = service_api.list(&list_params).await?;
+            for inst in services {
+                let name = &inst.name_any();
+                debug!("Deleting Service {name}");
+                service_api.delete(name, &delete_params).await?;
+            }
+
+            let secrets = secret_api.list(&list_params).await?;
+            for inst in secrets {
+                let name = &inst.name_any();
+                debug!("Deleting Secret {name}");
+                secret_api.delete(name, &delete_params).await?;
+            }
+            debug!("Done removing elements.");
+            Ok(())
+        }
+    }
+
+    pub async fn create_postgres_instance(
+        client: Client,
+        name: &str,
+    ) -> anyhow::Result<PostgresInstance> {
         let deployment_api: Api<Deployment> = Api::default_namespaced(client.clone());
         let secret_api: Api<Secret> = Api::default_namespaced(client.clone());
         let service_api: Api<Service> = Api::default_namespaced(client.clone());
+        let app_name = format!("postgres-{name}");
+
+        let inst = PostgresInstance {
+            secret_name: format!("pg-{name}-test-secret").into(),
+            app_name: app_name.clone(),
+            client: client.clone(),
+        };
+        debug!("Destroying existing instance of database.");
+        inst.close().await?; // close
+
         // secret+configmap
         let config = Secret {
             metadata: ObjectMeta {
-                name: Some("test-config".into()),
+                name: Some(format!("pg-{name}-test-config").into()),
+                labels: Some(BTreeMap::from([("app".into(), app_name.clone())])),
                 ..Default::default()
             },
             string_data: Some(BTreeMap::from([
@@ -39,10 +100,10 @@ pub mod tests {
             ])),
             ..Default::default()
         };
-
         let credentials = Secret {
             metadata: ObjectMeta {
-                name: Some("test-secret".into()),
+                name: Some(format!("pg-{name}-test-secret").into()),
+                labels: Some(BTreeMap::from([("app".into(), app_name.clone())])),
                 ..Default::default()
             },
             string_data: Some(BTreeMap::from([
@@ -50,7 +111,7 @@ pub mod tests {
                 ("password".into(), "dcs_password".into()),
                 (
                     "jdbcUrl".into(),
-                    "jdbc:postgresql://postgres.default.svc:5432/dcs".into(),
+                    format!("jdbc:postgresql://{app_name}.default.svc:5432/dcs").into(),
                 ),
             ])),
             ..Default::default()
@@ -61,18 +122,19 @@ pub mod tests {
         // service
         let pg_deployment = Deployment {
             metadata: ObjectMeta {
-                name: Some("postgres".into()),
+                name: Some(app_name.clone()),
+                labels: Some(BTreeMap::from([("app".into(), app_name.clone())])),
                 ..Default::default()
             },
             spec: Some(DeploymentSpec {
                 replicas: Some(1),
                 selector: LabelSelector {
-                    match_labels: Some(BTreeMap::from([("app".into(), "postgres".into())])),
+                    match_labels: Some(BTreeMap::from([("app".into(), app_name.clone())])),
                     ..Default::default()
                 },
                 template: PodTemplateSpec {
                     metadata: Some(ObjectMeta {
-                        labels: Some(BTreeMap::from([("app".into(), "postgres".into())])),
+                        labels: Some(BTreeMap::from([("app".into(), app_name.clone())])),
                         ..Default::default()
                     }),
                     spec: Some(PodSpec {
@@ -94,7 +156,7 @@ pub mod tests {
                             }]),
                             env_from: Some(vec![EnvFromSource {
                                 secret_ref: Some(SecretEnvSource {
-                                    name: "test-config".into(),
+                                    name: format!("pg-{name}-test-config").into(),
                                     ..Default::default()
                                 }),
                                 ..Default::default()
@@ -112,8 +174,8 @@ pub mod tests {
 
         let pg_service = Service {
             metadata: ObjectMeta {
-                name: Some("postgres".into()),
-                labels: Some(BTreeMap::from([("app".into(), "postgres".into())])),
+                name: Some(app_name.clone()),
+                labels: Some(BTreeMap::from([("app".into(), app_name.clone())])),
                 ..Default::default()
             },
             spec: Some(ServiceSpec {
@@ -122,7 +184,7 @@ pub mod tests {
                     port: 5432,
                     ..Default::default()
                 }]),
-                selector: Some(BTreeMap::from([("app".into(), "postgres".into())])),
+                selector: Some(BTreeMap::from([("app".into(), app_name.clone())])),
                 ..Default::default()
             }),
             status: None,
@@ -136,15 +198,32 @@ pub mod tests {
 
         let establish = await_condition(
             deployment_api,
-            "postgres",
+            &app_name,
             conditions::is_deployment_completed(),
         );
         let _ = tokio::time::timeout(std::time::Duration::from_secs(120), establish)
             .await
             .expect("postgres could not start in time");
 
-        Ok(PostgresCredentials {
-            secret_name: "test-secret".into(),
-        })
+        Ok(inst)
+    }
+
+    /// await an OpenDcsDatabase instance to be ready (MigrationState::Ready)
+    pub fn odcs_database_ready() -> impl Condition<OpenDcsDatabase> {
+        odcs_database_state(MigrationState::Ready)
+    }
+
+    /// await an OpenDcsDatabase instance to at a state
+    pub fn odcs_database_state(expected_state: MigrationState) -> impl Condition<OpenDcsDatabase> {
+        move |obj: Option<&OpenDcsDatabase>| {
+            if let Some(db) = &obj {
+                if let Some(status) = &db.status {
+                    if let Some(state) = &status.state {
+                        return *state == expected_state;
+                    }
+                }
+            }
+            false
+        }
     }
 }
