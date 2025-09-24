@@ -12,13 +12,14 @@ pub mod tests {
         schema::controller,
         telemetry::state::State,
     };
-    use tracing::{debug, info, trace, warn};
+    use tracing::{debug, trace, warn};
     use tracing_subscriber::{EnvFilter, Registry, prelude::*};
 
     use std::{
         env,
         process::Command,
-        thread::{self, JoinHandle}, time::Duration,
+        thread::{self, JoinHandle},
+        time::Duration,
     };
 
     use kube::{
@@ -48,7 +49,7 @@ pub mod tests {
             let kconfig = Kubeconfig::read().expect("unable to read any kubernetes config files");
             let opts = KubeConfigOptions {
                 // kind prefixes everything with kind-
-                cluster: Some("kind-odcs-test".into()),                
+                cluster: Some("kind-odcs-test".into()),
                 ..Default::default()
             };
             let mut config = Config::from_custom_kubeconfig(kconfig, &opts)
