@@ -12,7 +12,7 @@ pub mod tests {
         schema::controller,
         telemetry::state::State,
     };
-    use tracing::{debug, info, warn};
+    use tracing::{debug, info, trace, warn};
     use tracing_subscriber::{EnvFilter, Registry, prelude::*};
 
     use std::{
@@ -55,11 +55,11 @@ pub mod tests {
                 .await
                 .expect("Unable to create config.");
             config.connect_timeout = Some(Duration::from_secs(300));
-            info!("{:?}", config);
-            let client = Client::try_from(config).expect("Unable to create client");
+            trace!("{:?}", config);
+            let client = Client::try_from(config.clone()).expect("Unable to create client");
             let schema_controller = K8s::start_schema_controller(client.clone());
             let inst = K8s {
-                config: config,
+                config: config.clone(),
                 _schema_controller: schema_controller,
             };
             inst.load_crds()
