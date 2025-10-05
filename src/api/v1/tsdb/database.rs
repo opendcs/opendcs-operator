@@ -38,17 +38,19 @@ pub struct OpenDcsDatabaseStatus {
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema, PartialEq)]
+
 /// Application Level Database State
+// note descriptions currently schema gen. see https://github.com/kube-rs/kube/issues/1821
 pub enum MigrationState {
-    /// Schema not yet installed.
+    // Schema not yet installed.
     Fresh,
-    /// Waiting for apps to shutdown.
+    // Waiting for apps to shutdown.
     PreparingToMigrate,
-    /// Applying Schema updates.
+    // Applying Schema updates.
     Migrating,
-    /// Apps can start connecting to database again.
+    // Apps can start connecting to database again.
     Ready,
-    /// Schema migration failed and requires user intervention..
+    // Schema migration failed and requires user intervention..
     Failed,
 }
 
