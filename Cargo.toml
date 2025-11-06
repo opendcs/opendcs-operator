@@ -56,7 +56,7 @@ opentelemetry_sdk = { version = "0.31.0", features = ["rt-tokio"] }
 env_logger = "0.11.8"
 prometheus-client = "0.24.0"
 testcontainers-modules = { version = "0.13.0", features = ["blocking","k3s"] }
-rustls = "0.23.31"
+rustls = "0.23.35"
 rstest = "0.26.1"
 async-std = { version = "1.13", features = ["attributes"] }
 ctor = "0.6.0"
