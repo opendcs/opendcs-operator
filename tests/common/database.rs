@@ -201,7 +201,7 @@ pub mod tests {
             &app_name,
             conditions::is_deployment_completed(),
         );
-        let _ = tokio::time::timeout(std::time::Duration::from_secs(120), establish)
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(300), establish)
             .await
             .expect("postgres could not start in time");
 
