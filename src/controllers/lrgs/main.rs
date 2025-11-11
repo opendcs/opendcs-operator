@@ -9,7 +9,7 @@ use opendcs_controllers::telemetry::telemetry;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     telemetry::init().await;
-
+    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     let state: State<LrgsCluster> = State::default();
     let data = Data::new(state.clone());
     let controller = controller::run(state.clone());
