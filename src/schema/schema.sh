@@ -24,11 +24,27 @@ for var in $(compgen -e); do
     fi
     
 done
+
+# Build classpath
+CP=$DCSTOOL_HOME/bin/opendcs.jar
+
+# If a user-specific 'dep' (dependencies) directory exists, then
+# add all the jars therein to the classpath.
+if [ -d "$DCSTOOL_USERDIR/dep" ]; then
+  CP=$CP:$DCSTOOL_USERDIR/dep/*
+fi
+CP=$CP:$DCSTOOL_HOME/dep/*
+
 echo "Placeholders ${PLACEHOLDERS[@]}"
-exec /opt/opendcs/bin/manageDatabase -I OpenDCS-Postgres \
-               -P /dcs_user_dir/user.properties \
-               -username "`cat /secrets/db-admin/username`" \
-               -password "`cat /secrets/db-admin/password`" \
-               -appUsername "`cat /secrets/db-app/username`" \
-               -appPassword "`cat /secrets/db-app/password`" \
-               "${PLACEHOLDERS[@]}"
+exec java  -Xms120m -cp $CP \
+    -Dlogback.configurationFile=$DCSTOOL_HOME/logback.xml \
+    -DAPP_NAME=migration \
+    -DLOG_LEVEL=${LOG_LEVEL:-INFO} \
+    -DDCSTOOL_HOME=$DCSTOOL_HOME -DDECODES_INSTALL_DIR=$DCSTOOL_HOME -DDCSTOOL_USERDIR=$DCSTOOL_USERDIR \
+    org.opendcs.database.ManageDatabaseApp -I OpenDCS-Postgres \
+    -P /dcs_user_dir/user.properties \
+    -username "`cat /secrets/db-admin/username`" \
+    -password "`cat /secrets/db-admin/password`" \
+    -appUsername "`cat /secrets/db-app/username`" \
+    -appPassword "`cat /secrets/db-app/password`" \
+    "${PLACEHOLDERS[@]}"

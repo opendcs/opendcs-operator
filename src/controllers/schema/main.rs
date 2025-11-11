@@ -11,6 +11,7 @@ use opendcs_controllers::schema::controller;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     telemetry::init().await;
+    rustls::crypto::ring::default_provider().install_default().expect("Failed to install rustls crypto provider");
     let client = Client::try_default()
         .await
         .expect("failed to create kube Client");
