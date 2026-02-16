@@ -19,7 +19,7 @@ pub struct OpenDcsDatabaseSpec {
     /// Migration image to use. Migration image tags will track the schema version they are as well if the opendcs release version
     #[garde(skip)]
     pub schema_version: String,
-    /// Secret for admin user of the database. Must contain the following keys: jdbcUrl, username, password
+    /// Secret for admin user of the database. Must contain the following keys: jdbc-uri, username, password
     #[garde(skip)]
     pub database_secret: String,
     #[garde(skip)]

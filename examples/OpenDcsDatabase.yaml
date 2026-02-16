@@ -30,7 +30,7 @@ type: Opaque
 stringData:
   password: SecurePassword
   username: dcs
-  jdbcUrl: jdbc:postgresql://postgres.default.svc:5432/dcs
+  "jdbc-uri": jdbc:postgresql://postgres.default.svc:5432/dcs
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

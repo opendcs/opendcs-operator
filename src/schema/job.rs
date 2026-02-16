@@ -120,7 +120,7 @@ impl MigrationJob {
             name: "DATABASE_URL".to_string(),
             value_from: Some(EnvVarSource {
                 secret_key_ref: Some(SecretKeySelector {
-                    key: "jdbcUrl".to_string(),
+                    key: "jdbc-uri".to_string(),
                     name: self.database.spec.database_secret.clone(),
                     optional: Some(true),
                 }),

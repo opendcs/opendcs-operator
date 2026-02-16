@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export DATABASE_URL=`cat /secrets/db-admin/jdbcUrl`
+export DATABASE_URL=`cat /secrets/db-admin/jdbc-uri`
 export DATABASE_TYPE=OPENTSDB
 export DATABASE_DRIVER="org.postgresql.Driver"
 export DATATYPE_STANDARD="CWMS"

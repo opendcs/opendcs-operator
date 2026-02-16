@@ -110,7 +110,7 @@ pub mod tests {
                 ("username".into(), "dcs".into()),
                 ("password".into(), "dcs_password".into()),
                 (
-                    "jdbcUrl".into(),
+                    "jdbc-uri".into(),
                     format!("jdbc:postgresql://{app_name}.default.svc:5432/dcs").into(),
                 ),
             ])),
