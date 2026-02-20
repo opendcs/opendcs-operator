@@ -1,6 +1,11 @@
 #!/bin/bash
 
+
 export DATABASE_URL=`cat /secrets/db-admin/jdbc-uri`
+export DB_HOST=`cat /secrets/db-admin/host`
+export DB_PORT=`cat /secrets/db-admin/port`
+export DB_NAME=`cat /secrets/db-admin/dbname`
+export DATABASE_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
 export DATABASE_TYPE=OPENTSDB
 export DATABASE_DRIVER="org.postgresql.Driver"
 export DATATYPE_STANDARD="CWMS"
