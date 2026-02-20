@@ -109,6 +109,9 @@ pub mod tests {
             string_data: Some(BTreeMap::from([
                 ("username".into(), "dcs".into()),
                 ("password".into(), "dcs_password".into()),
+                ("dbname".into(), "dcs".into()),
+                ("host".into(), format!("{app_name}").into()),
+                ("port".into(), "5432".into()),
                 (
                     "jdbc-uri".into(),
                     format!("jdbc:postgresql://{app_name}.default.svc:5432/dcs").into(),
