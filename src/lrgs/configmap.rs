@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use k8s_openapi::{api::core::v1::ConfigMap, apimachinery::pkg::apis::meta::v1::OwnerReference};
 use kube::api::ObjectMeta;
-use sha1::Digest;
+use sha2::Digest;
 use sha2::Sha256;
 
 pub fn created_script_config_map(
