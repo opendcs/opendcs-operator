@@ -17,8 +17,8 @@ mod tests {
     async fn test_schema_upgrade(#[future] k8s_inst: &K8s) {
         let k8s_inst = k8s_inst.await;
         let client = k8s_inst.get_client();
-        let base_image = "ghcr.io/opendcs/compdepends:main-nightly";
-        let upgrade_image = "ghcr.io/opendcs/compdepends:sha-a50092b";
+        let base_image = "ghcr.io/opendcs/migration:main-nightly";
+        let upgrade_image = "ghcr.io/opendcs/migration:sha-e1efbba";
 
         let db = k8s_inst.create_database("upgrade").await;
 
