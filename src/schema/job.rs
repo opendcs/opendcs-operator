@@ -4,8 +4,7 @@ use crate::{
     api::{
         constants::TSDB_GROUP,
         v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus},
-    },
-    schema::configmap::create_script_config_map,
+    }
 };
 use anyhow::Result;
 use chrono::Utc;
@@ -13,7 +12,7 @@ use k8s_openapi::{
     api::{
         batch::v1::{Job, JobSpec},
         core::v1::{
-            ConfigMap, ConfigMapVolumeSource, Container, EnvVar, EnvVarSource, Pod, PodSpec,
+            Container, EnvVar, EnvVarSource, Pod, PodSpec,
             PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume,
             VolumeMount,
         },
@@ -128,6 +127,36 @@ impl MigrationJob {
             }),
             ..Default::default()
         });
+        env.push(EnvVar {
+            name: "MIGRATION_USER_FILE".to_string(),
+            value: Some("/secrets/db-admin/username".to_string()),
+            ..Default::default()
+        });
+        env.push(EnvVar {
+            name: "MIGRATION_PASSWORD_FILE".to_string(),
+            value: Some("/secrets/db-admin/password".to_string()),
+            ..Default::default()
+        });
+        env.push(EnvVar {
+            name: "APP_USER_FILE".to_string(),
+            value: Some("/secrets/db-app/username".to_string()),
+            ..Default::default()
+        });
+        env.push(EnvVar {
+            name: "APP_PASSWORD_FILE".to_string(),
+            value: Some("/secrets/db-app/password".to_string()),
+            ..Default::default()
+        });
+        env.push(EnvVar {
+            name: "DATABASE_TYPE".to_string(),
+            value: Some("OpenDCS-Postgres".to_string()),
+            ..Default::default()
+        });
+        env.push(EnvVar {
+            name: "DATABASE_IMPLEMENTATION".to_string(),
+            value: Some("OpenDCS-Postgres".to_string()),
+            ..Default::default()
+        });
         let dt = Utc::now().format("%Y%m%d%Y%H%M%S");
         let job_name = format!("{}-database-migration-{}", &self.name, &dt);
         let job = Job {
@@ -157,21 +186,12 @@ impl MigrationJob {
                         containers: vec![Container {
                             name: "schema-migration".to_string(),
                             image: Some(self.database.spec.schema_version.clone()),
-                            command: Some(vec![
-                                "/bin/bash".to_string(),
-                                "/scripts/schema.sh".to_string(),
-                            ]),
                             security_context: Some(SecurityContext {
                                 allow_privilege_escalation: Some(false),
                                 ..Default::default()
                             }),
                             env: Some(env),
                             volume_mounts: Some(vec![
-                                VolumeMount {
-                                    name: "schema-scripts".to_string(),
-                                    mount_path: "/scripts".to_string(),
-                                    ..Default::default()
-                                },
                                 VolumeMount {
                                     name: "db-admin".to_string(),
                                     mount_path: "/secrets/db-admin".to_string(),
@@ -186,14 +206,6 @@ impl MigrationJob {
                             ..Default::default()
                         }],
                         volumes: Some(vec![
-                            Volume {
-                                name: "schema-scripts".to_string(),
-                                config_map: Some(ConfigMapVolumeSource {
-                                    name: format!("{}-schema-scripts", self.owner_ref.name),
-                                    ..Default::default()
-                                }),
-                                ..Default::default()
-                            },
                             Volume {
                                 name: "db-admin".to_string(),
                                 secret: Some(SecretVolumeSource {
@@ -226,15 +238,6 @@ impl MigrationJob {
         };
         let patch_name = "database-controller";
         let pp = PatchParams::apply(patch_name);
-        let schema_config_map = create_script_config_map(self.namespace.clone(), &self.owner_ref);
-        let config_map_api: Api<ConfigMap> = Api::namespaced(self.client.clone(), &self.namespace);
-        config_map_api
-            .patch(
-                &schema_config_map.name_any(),
-                &pp,
-                &Patch::Apply(schema_config_map),
-            )
-            .await?;
         let jobs: Api<Job> = Api::namespaced(self.client.clone(), &self.namespace);
         jobs.patch(&job.name_any(), &pp, &Patch::Apply(job)).await?;
         /*let events: Api<Event> =Api::namespaced(self.client.clone(), &self.namespace);
