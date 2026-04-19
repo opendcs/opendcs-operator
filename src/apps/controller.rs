@@ -3,19 +3,18 @@ use std::{collections::BTreeMap, sync::Arc, time::Duration};
 use crate::{
     api::{
         constants::TSDB_GROUP,
-        v1::tsdb::{app::{OpenDcsApp, OpenDcsAppStatus}, database::{MigrationState, OpenDcsDatabase}},
-    },
-    telemetry::{
+        v1::tsdb::{app::{OpenDcsApp, OpenDcsAppSpec, OpenDcsAppStatus}, database::{MigrationState, OpenDcsDatabase}},
+    }, apps::app_deployment::from, telemetry::{
         state::{Context, State},
         telemetry,
-    },
+    }
 };
 use anyhow::anyhow;
 use chrono::Utc;
 use futures::StreamExt;
 use k8s_openapi::{
     ByteString,
-    api::{batch::v1::Job, core::v1::Secret},
+    api::{apps::v1::Deployment, batch::v1::Job, core::v1::Secret},
 };
 use kube::{
     Api, Client, Error, Resource, ResourceExt,
@@ -68,6 +67,7 @@ async fn reconcile(
         .unwrap_or("default".to_string());
     info!("Processing \"{}\" in {}", object.name_any(), ns);
     let apps: Api<OpenDcsApp> = Api::namespaced(client.clone(), &ns);
+    let deployments: Api<Deployment> = Api::namespaced(client.clone(), &ns);
     let secrets: Api<Secret> = Api::namespaced(client.clone(), &ns);
     let databases: Api<OpenDcsDatabase> = Api::namespaced(client.clone(), &ns);
     let patch_name = "app-controller";
@@ -80,12 +80,47 @@ async fn reconcile(
             return Ok(Action::requeue(Duration::from_secs(3600/4)));
         },
     };
-    let dbStatus = match db.status {
-        Some(s) => s.state.unwrap_or(MigrationState::Fresh),
-        None => return Ok(Action::requeue(Duration::from_secs(3600/4)));,
+    let db_status = match &db.status {
+        Some(s) => s.state.clone().unwrap_or(MigrationState::Fresh),
+        None => {
+            return Ok(Action::requeue(Duration::from_secs(3600/4)));
+        }
     };
 
-    // find existing app
+    let app = apps.get_opt(&object.spec.application).await?;
+
+    match db_status {
+        MigrationState::Fresh => {
+            return Ok(Action::requeue(Duration::from_mins(5)));
+        },
+        MigrationState::PreparingToMigrate => {
+            match app {
+                Some(_app) => {
+                    info!("Database is preparing to migrate, bringing replicas to 0");
+                    // Update the deployment
+                },
+                None => {
+                    // no app yet, don't worry about it.
+                    return Ok(Action::requeue(Duration::from_mins(5)))
+                }
+            }
+        }
+        MigrationState::Migrating => {
+            info!("Database {} is currently migrating, waiting for completion.", db_name);
+            return Ok(Action::requeue(Duration::from_mins(5)));
+        }
+        MigrationState::Ready => {
+            info!("Database ready, creating/updating deployment");
+            let deployment = from(&object, &db, client).await;
+            let pp = PatchParams::apply(patch_name);
+            deployments.patch(&deployment.name_any(), &pp, &Patch::Apply(deployment)).await?;
+        },
+        MigrationState::Failed => {
+            info!("Database {} is in a failed state. Waiting until until fixed to change anything.", db_name);
+            return Ok(Action::requeue(Duration::from_mins(30)));
+        },
+    }
+
     // if db ready make sure active
     // if db preparinging to migrate bring counts to 0
     // if db migrating, make sure nothing else starts
