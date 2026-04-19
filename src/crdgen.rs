@@ -24,4 +24,9 @@ fn main() {
         "{}",
         serde_yaml::to_string(&v1::tsdb::database::OpenDcsDatabase::crd()).unwrap()
     );
+    println!("---");
+    print!(
+        "{}",
+        serde_yaml::to_string(&v1::tsdb::app::OpenDcsApp::crd()).unwrap()
+    );
 }
