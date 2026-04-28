@@ -34,14 +34,14 @@ pub struct OpenDcsAppSpec {
     #[garde(skip)]
     pub database: String,
     // internal application name
-    #[garde(skip)]        
+    #[garde(skip)]
     pub app_name: Option<String>,
 
     /// Allow setting of specific limits
     /// For most apps the default resources are a limit of CPU 1, memory 300m
     /// This covers the majority of usage. The Web-Api will be provided the same
     /// CPU limit with 2000m of memory.
-    #[garde(skip)]  
+    #[garde(skip)]
     pub resources: Option<ResourceRequirements>,
 
     /// Instances of app. NOTE: At this time only set this above 1 on web-api. value will default to one
@@ -64,11 +64,10 @@ pub struct OpenDcsAppSpec {
     #[serde(default)]
     pub extra_volumes: Option<Vec<Volume>>,
 
-
     /// Optional additional labels to place on the deployment
     #[garde(skip)]
     #[serde(default)]
-    pub labels: Option<BTreeMap<String,String>>
+    pub labels: Option<BTreeMap<String, String>>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, JsonSchema)]
