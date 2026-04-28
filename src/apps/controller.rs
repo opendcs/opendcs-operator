@@ -1,27 +1,26 @@
-use std::{collections::BTreeMap, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 
 use crate::{
-    api::{
-        constants::TSDB_GROUP,
-        v1::tsdb::{app::{OpenDcsApp, OpenDcsAppSpec, OpenDcsAppStatus}, database::{MigrationState, OpenDcsDatabase}},
-    }, apps::app_deployment::from, telemetry::{
+    api::v1::tsdb::{
+        app::{OpenDcsApp, OpenDcsAppSpec},
+        database::{MigrationState, OpenDcsDatabase},
+    },
+    apps::app_deployment::from,
+    telemetry::{
         state::{Context, State},
         telemetry,
-    }
+    },
 };
 use anyhow::anyhow;
 use chrono::Utc;
 use futures::StreamExt;
-use k8s_openapi::{
-    ByteString,
-    api::{apps::v1::Deployment, batch::v1::Job, core::v1::Secret},
-};
+use k8s_openapi::api::{apps::v1::Deployment, batch::v1::Job, core::v1::Secret};
 use kube::{
-    Api, Client, Error, Resource, ResourceExt,
-    api::{ObjectMeta, Patch, PatchParams},
+    Api, Client, Error, ResourceExt,
+    api::{Patch, PatchParams},
     runtime::{Controller, controller::Action, watcher},
 };
-use serde_json::json;
+
 use tracing::{Span, field, info, instrument, warn};
 
 pub async fn run(state: State<OpenDcsApp>, client: Client) {
@@ -59,7 +58,6 @@ async fn reconcile(
     let _timer = ctx.metrics.reconcile.count_and_measure(&trace_id);
     ctx.diagnostics.write().await.last_event = Utc::now();
     let client = &ctx.client;
-    let name = object.metadata.name.clone().unwrap();
     let ns = object
         .metadata
         .namespace
@@ -68,7 +66,7 @@ async fn reconcile(
     info!("Processing \"{}\" in {}", object.name_any(), ns);
     let apps: Api<OpenDcsApp> = Api::namespaced(client.clone(), &ns);
     let deployments: Api<Deployment> = Api::namespaced(client.clone(), &ns);
-    let secrets: Api<Secret> = Api::namespaced(client.clone(), &ns);
+    let _secrets: Api<Secret> = Api::namespaced(client.clone(), &ns);
     let databases: Api<OpenDcsDatabase> = Api::namespaced(client.clone(), &ns);
     let patch_name = "app-controller";
 
@@ -77,13 +75,13 @@ async fn reconcile(
         Some(db) => db,
         None => {
             info!("OpenDcsDatabase {} does not yet exist", db_name);
-            return Ok(Action::requeue(Duration::from_secs(3600/4)));
-        },
+            return Ok(Action::requeue(Duration::from_secs(3600 / 4)));
+        }
     };
     let db_status = match &db.status {
         Some(s) => s.state.clone().unwrap_or(MigrationState::Fresh),
         None => {
-            return Ok(Action::requeue(Duration::from_secs(3600/4)));
+            return Ok(Action::requeue(Duration::from_secs(3600 / 4)));
         }
     };
 
@@ -92,39 +90,58 @@ async fn reconcile(
     match db_status {
         MigrationState::Fresh => {
             return Ok(Action::requeue(Duration::from_mins(5)));
-        },
+        }
         MigrationState::PreparingToMigrate => {
             match app {
-                Some(_app) => {
+                Some(app) => {
                     info!("Database is preparing to migrate, bringing replicas to 0");
-                    // Update the deployment
-                },
+                    let updated_app = OpenDcsApp {
+                        spec: OpenDcsAppSpec {
+                            replicas: Some(0),
+                            ..app.spec
+                        },
+                        ..app
+                    };
+                    // Update the deployment to set to 0
+                    let deployment = from(&updated_app, &db, client).await;
+                    let pp = PatchParams::apply(patch_name);
+                    deployments
+                        .patch(&deployment.name_any(), &pp, &Patch::Apply(deployment))
+                        .await?;
+                }
                 None => {
                     // no app yet, don't worry about it.
-                    return Ok(Action::requeue(Duration::from_mins(5)))
+                    return Ok(Action::requeue(Duration::from_mins(5)));
                 }
             }
         }
         MigrationState::Migrating => {
-            info!("Database {} is currently migrating, waiting for completion.", db_name);
+            info!(
+                "Database {} is currently migrating, waiting for completion.",
+                db_name
+            );
             return Ok(Action::requeue(Duration::from_mins(5)));
         }
         MigrationState::Ready => {
             info!("Database ready, creating/updating deployment");
             let deployment = from(&object, &db, client).await;
             let pp = PatchParams::apply(patch_name);
-            deployments.patch(&deployment.name_any(), &pp, &Patch::Apply(deployment)).await?;
-        },
+            deployments
+                .patch(&deployment.name_any(), &pp, &Patch::Apply(deployment))
+                .await?;
+        }
         MigrationState::Failed => {
-            info!("Database {} is in a failed state. Waiting until until fixed to change anything.", db_name);
+            info!(
+                "Database {} is in a failed state. Waiting until until fixed to change anything.",
+                db_name
+            );
             return Ok(Action::requeue(Duration::from_mins(30)));
-        },
+        }
     }
 
-    // if db ready make sure active
     // if db preparinging to migrate bring counts to 0
     // if db migrating, make sure nothing else starts
-    
+
     Ok(Action::requeue(Duration::from_secs(3600 / 2)))
 }
 
