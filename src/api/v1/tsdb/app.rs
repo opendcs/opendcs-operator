@@ -13,7 +13,7 @@ use crate::api::v1::tsdb::database::MigrationState;
 /// That will allow administrators to adjust settings for their local environments
 /// if not provided either defaults configured on the operator will be used
 /// or nothing.
-#[derive(CustomResource, Deserialize, Serialize, Clone, Debug, KubeSchema, Validate)]
+#[derive(CustomResource, Deserialize, Serialize, Clone, Debug, KubeSchema, Validate, Default)]
 #[kube(
     group = "tsdb.opendcs.org",
     version = "v1",
