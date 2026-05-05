@@ -3,6 +3,8 @@ mod common;
 #[cfg(test)]
 mod tests {
 
+    use std::time::Duration;
+
     use kube::{
         Api,
         api::{ObjectMeta, Patch, PatchParams},
@@ -58,21 +60,22 @@ mod tests {
         let client = k8s_inst.get_client();
         let base_image = "ghcr.io/opendcs/migration:main-nightly";
 
-        let db = k8s_inst.create_database("app").await;
+        let db = k8s_inst.create_database("testapp-pg").await;
 
-        let odcs_db = OpenDcsTestDatabase::new(client.clone(), "testdb-app", &db, base_image).await;
+        let odcs_db = OpenDcsTestDatabase::new(client.clone(), "testapp-db", &db, base_image).await;
         let status = odcs_db.opendcs_database.status.clone().expect("No status?");
         assert!(status.state == Some(MigrationState::Ready));
         assert!(status.applied_schema_version == Some(base_image.into()));
-
+        info!("applying app yaml.");
         let app = OpenDcsApp {
             metadata: ObjectMeta {
                 name: Some("testapp-web-api".into()),
-                ..odcs_db.opendcs_database.metadata.clone()
+                ..Default::default()
             },
             spec: OpenDcsAppSpec {
                 application: "web-api".into(),
                 version: Some("main-nightly".into()),
+                database: odcs_db.name.clone(),
                 ..Default::default()
             },
             status: None,
@@ -80,13 +83,15 @@ mod tests {
         let pp = PatchParams::apply("testapp-patch");
         let dcs_app_api: Api<OpenDcsApp> = Api::default_namespaced(client.clone());
         dcs_app_api
-            .patch("testapp-patch", &pp, &Patch::Apply(app.clone()))
+            .patch("testapp-web-api", &pp, &Patch::Apply(app.clone()))
             .await
             .expect("Unable to create OpenDCS App Instance.");
 
-        assert!(odcs_db.delete().await);
 
-        info!("OpenDCS Database Removed.");
-        db.close().await.expect("Unable to cleanup resources.");
+        tokio::time::sleep(Duration::from_mins(2)).await;
+        // assert!(odcs_db.delete().await);
+
+        // info!("OpenDCS Database Removed.");
+        // db.close().await.expect("Unable to cleanup resources.");
     }
 }

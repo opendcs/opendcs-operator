@@ -63,7 +63,7 @@ pub async fn from(app: &OpenDcsApp, database: &OpenDcsDatabase, _client: &Client
                             "ghcr.io/opendcs/{}:{}",
                             app.spec.application, version
                         )),
-
+                        name: name.clone(),
                         env: Some(env),
 
                         ..Default::default()
