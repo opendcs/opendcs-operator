@@ -14,7 +14,7 @@ use crate::{
 use anyhow::anyhow;
 use chrono::Utc;
 use futures::StreamExt;
-use k8s_openapi::api::{apps::v1::Deployment, batch::v1::Job, core::v1::Secret};
+use k8s_openapi::api::{apps::v1::Deployment, core::v1::Secret};
 use kube::{
     Api, Client, Error, ResourceExt,
     api::{Patch, PatchParams},
@@ -25,11 +25,11 @@ use tracing::{Span, field, info, instrument, warn};
 
 pub async fn run(state: State<OpenDcsApp>, client: Client) {
     let apps: Api<OpenDcsApp> = Api::all(client.clone());
-    let jobs: Api<Job> = Api::all(client.clone());
+    let deployments: Api<Deployment> = Api::all(client.clone());
     let secrets: Api<Secret> = Api::all(client.clone());
-    println!("Starting controller");
+    println!("Starting DcsApp controller");
     Controller::new(apps.clone(), watcher::Config::default())
-        .owns(jobs, watcher::Config::default())
+        .owns(deployments, watcher::Config::default())
         .owns(secrets.clone(), watcher::Config::default())
         //     .owns(services.clone(), watcher::Config::default())
         //     .owns(cm, watcher::Config::default())
