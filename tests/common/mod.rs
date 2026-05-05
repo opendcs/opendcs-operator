@@ -8,8 +8,12 @@ pub mod tests {
 
     use k8s_openapi::apiextensions_apiserver::pkg::apis::apiextensions::v1::CustomResourceDefinition;
     use opendcs_controllers::{
-        api::v1::{lrgs::LrgsCluster, tsdb::database::OpenDcsDatabase},
-        schema::controller,
+        api::v1::{
+            lrgs::LrgsCluster,
+            tsdb::{app::OpenDcsApp, database::OpenDcsDatabase},
+        },
+        apps,
+        schema::{self},
         telemetry::state::State,
     };
     use tracing::{debug, trace, warn};
@@ -37,6 +41,7 @@ pub mod tests {
     pub struct K8s {
         config: Config,
         _schema_controller: JoinHandle<()>,
+        _apps_controller: JoinHandle<()>,
     }
 
     impl K8s {
@@ -59,9 +64,11 @@ pub mod tests {
             trace!("{:?}", config);
             let client = Client::try_from(config.clone()).expect("Unable to create client");
             let schema_controller = K8s::start_schema_controller(client.clone());
+            let apps_controller = K8s::start_apps_controller(client.clone());
             let inst = K8s {
                 config: config.clone(),
                 _schema_controller: schema_controller,
+                _apps_controller: apps_controller,
             };
             inst.load_crds()
                 .await
@@ -77,12 +84,24 @@ pub mod tests {
             let state: State<OpenDcsDatabase> = State::default();
             let _data = Data::new(state.clone());
 
-            let controller = controller::run(state.clone(), client.clone());
+            let controller = schema::controller::run(state.clone(), client.clone());
             let schema_thread = thread::spawn(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(controller);
             });
             schema_thread
+        }
+
+        fn start_apps_controller(client: Client) -> JoinHandle<()> {
+            let state: State<OpenDcsApp> = State::default();
+            let _data = Data::new(state.clone());
+
+            let controller = apps::controller::run(state.clone(), client.clone());
+            let apps_thread = thread::spawn(move || {
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(controller);
+            });
+            apps_thread
         }
 
         async fn load_crds(&self) -> Result<()> {
@@ -105,7 +124,7 @@ pub mod tests {
             crd_api
                 .patch(&crd_name, &patch, &Patch::Apply(LrgsCluster::crd()))
                 .await
-                .expect("can't make database crd.");
+                .expect("can't make lrgs crd.");
 
             let establish =
                 await_condition(crd_api.clone(), &crd_name, conditions::is_crd_established());
@@ -113,7 +132,18 @@ pub mod tests {
                 .await
                 .expect("crd not successfully loaded");
 
-            debug!("CRDs loaded an established.");
+            let crd_name = OpenDcsApp::crd_name();
+            crd_api
+                .patch(&crd_name, &patch, &Patch::Apply(OpenDcsApp::crd()))
+                .await
+                .expect("can't make apps crd.");
+            let establish =
+                await_condition(crd_api.clone(), &crd_name, conditions::is_crd_established());
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(10), establish)
+                .await
+                .expect("crd not successfully loaded");
+
+            debug!("CRDs loaded and established.");
             Ok(())
         }
 

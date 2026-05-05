@@ -1,10 +1,8 @@
 use std::collections::BTreeMap;
 
-use crate::{
-    api::{
-        constants::TSDB_GROUP,
-        v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus},
-    }
+use crate::api::{
+    constants::TSDB_GROUP,
+    v1::tsdb::database::{MigrationState, OpenDcsDatabase, OpenDcsDatabaseStatus},
 };
 use anyhow::Result;
 use chrono::Utc;
@@ -12,9 +10,8 @@ use k8s_openapi::{
     api::{
         batch::v1::{Job, JobSpec},
         core::v1::{
-            Container, EnvVar, EnvVarSource, Pod, PodSpec,
-            PodTemplateSpec, SecretKeySelector, SecretVolumeSource, SecurityContext, Volume,
-            VolumeMount,
+            Container, EnvVar, EnvVarSource, Pod, PodSpec, PodTemplateSpec, SecretKeySelector,
+            SecretVolumeSource, SecurityContext, Volume, VolumeMount,
         },
     },
     apimachinery::pkg::apis::meta::v1::OwnerReference,
@@ -157,6 +154,17 @@ impl MigrationJob {
             value: Some("OpenDCS-Postgres".to_string()),
             ..Default::default()
         });
+        env.push(EnvVar {
+            name: "DATATYPE_STANDARD".to_string(),
+            value: Some("CWMS".to_string()),
+            ..Default::default()
+        });
+        env.push(EnvVar {
+            name: "KEYGENERATOR".to_string(),
+            value: Some("decodes.sql.SequenceKeyGenerator".to_string()),
+            ..Default::default()
+        });
+        
         let dt = Utc::now().format("%Y%m%d%Y%H%M%S");
         let job_name = format!("{}-database-migration-{}", &self.name, &dt);
         let job = Job {
