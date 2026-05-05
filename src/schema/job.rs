@@ -154,6 +154,17 @@ impl MigrationJob {
             value: Some("OpenDCS-Postgres".to_string()),
             ..Default::default()
         });
+        env.push(EnvVar {
+            name: "DATATYPE_STANDARD".to_string(),
+            value: Some("CWMS".to_string()),
+            ..Default::default()
+        });
+        env.push(EnvVar {
+            name: "KEYGENERATOR".to_string(),
+            value: Some("decodes.sql.SequenceKeyGenerator".to_string()),
+            ..Default::default()
+        });
+        
         let dt = Utc::now().format("%Y%m%d%Y%H%M%S");
         let job_name = format!("{}-database-migration-{}", &self.name, &dt);
         let job = Job {
