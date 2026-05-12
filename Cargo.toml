@@ -38,7 +38,7 @@ futures = "0.3.32"
 garde = { version = "0.22.1", default-features = false, features = ["derive"] }
 simple-xml-builder = "1.1.0"
 clap = { version = "4.6", features = ["derive", "string"] }
-sha1 = "0.10"
+sha1 = "0.11"
 sha2 = "0.11.0"
 base16ct = { version = "1.0.0", features = ["alloc"] }
 #hickory-resolver = "0.24.4"
@@ -50,13 +50,13 @@ actix-web = "4.13.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.20", features = ["json", "env-filter"] }
 tracing-opentelemetry = "0.32.1"
-opentelemetry = { version = "0.31.0", features = ["trace"] }
-opentelemetry-otlp = { version = "0.31.1", optional = true }
-opentelemetry_sdk = { version = "0.31.0", features = ["rt-tokio"] }
+opentelemetry = { version = "0.32.0", features = ["trace"] }
+opentelemetry-otlp = { version = "0.32.0", optional = true }
+opentelemetry_sdk = { version = "0.32.0", features = ["rt-tokio"] }
 env_logger = "0.11.8"
 prometheus-client = "0.24.0"
 testcontainers-modules = { version = "0.15.0", features = ["blocking","k3s"] }
 rustls = { version = "0.23.37", features = ["ring"] }
 rstest = "0.26.1"
 async-std = { version = "1.13", features = ["attributes"] }
-ctor = "0.6.3"
+ctor = "1.0.5"
