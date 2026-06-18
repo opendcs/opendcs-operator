@@ -61,7 +61,7 @@ pub async fn run(state: State<LrgsCluster>) {
         Some(obj_ref)
     };
 
-    println!("Starting controller");
+    println!("Starting LRGS controller");
     Controller::new(lrgs_cluster.clone(), watcher::Config::default())
         .owns(stateful_set, watcher::Config::default())
         .owns(secrets.clone(), watcher::Config::default())

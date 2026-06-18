@@ -31,7 +31,7 @@ pub async fn run(state: State<OpenDcsDatabase>, client: Client) {
     let databases: Api<OpenDcsDatabase> = Api::all(client.clone());
     let jobs: Api<Job> = Api::all(client.clone());
     let secrets: Api<Secret> = Api::all(client.clone());
-    println!("Starting controller");
+    println!("Starting Schema controller");
     Controller::new(databases.clone(), watcher::Config::default())
         .owns(jobs, watcher::Config::default())
         .owns(secrets.clone(), watcher::Config::default())
