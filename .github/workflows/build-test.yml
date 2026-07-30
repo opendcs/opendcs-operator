@@ -18,10 +18,9 @@ jobs:
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
       - uses: actions/checkout@v6.0.3
-      - uses: engineerd/setup-kind@v0.6.2
+      - uses: helm/kind-action@v1.14.0
         with:
-          version: "v0.30.0"
-          name: odcs-test
+          cluster_name: odcs-test
       - name: Enable ipv4 and ipv6 forwarding
         run: |
           sudo sysctl -w net.ipv6.conf.all.forwarding=1
