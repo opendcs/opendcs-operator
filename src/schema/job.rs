@@ -164,7 +164,6 @@ impl MigrationJob {
             value: Some("decodes.sql.SequenceKeyGenerator".to_string()),
             ..Default::default()
         });
-        
         let dt = Utc::now().format("%Y%m%d%Y%H%M%S");
         let job_name = format!("{}-database-migration-{}", &self.name, &dt);
         let job = Job {
