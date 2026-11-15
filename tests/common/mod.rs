@@ -85,11 +85,10 @@ pub mod tests {
             let _data = Data::new(state.clone());
 
             let controller = schema::controller::run(state.clone(), client.clone());
-            let schema_thread = thread::spawn(move || {
+            thread::spawn(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(controller);
-            });
-            schema_thread
+            })
         }
 
         fn start_apps_controller(client: Client) -> JoinHandle<()> {
@@ -97,11 +96,10 @@ pub mod tests {
             let _data = Data::new(state.clone());
 
             let controller = apps::controller::run(state.clone(), client.clone());
-            let apps_thread = thread::spawn(move || {
+            thread::spawn(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(controller);
-            });
-            apps_thread
+            })
         }
 
         async fn load_crds(&self) -> Result<()> {
