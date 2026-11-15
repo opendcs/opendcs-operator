@@ -44,7 +44,7 @@ jobs:
           ref: ${{inputs.branch}}
       - name: Install cosign
         uses: sigstore/cosign-installer@main
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
       - name: Set Version
         if: inputs.nightly      
         run: echo "VERSION=${{inputs.branch}}-nightly" >> $GITHUB_ENV
